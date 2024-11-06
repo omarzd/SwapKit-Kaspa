@@ -1,4 +1,4 @@
-import { ExplorerUrl, RPCUrl } from "./network";
+import { EXPLORER_URLS, getRPCUrl } from "./network";
 
 export enum Chain {
   Arbitrum = "ARB",
@@ -21,6 +21,11 @@ export enum Chain {
   Radix = "XRD",
   THORChain = "THOR",
   Solana = "SOL",
+}
+
+export enum StagenetChain {
+  THORChain = "THOR_STAGENET",
+  Maya = "MAYA_STAGENET",
 }
 
 export type WalletChain = Exclude<Chain, Chain.Radix>;
@@ -196,10 +201,10 @@ export const ChainToChainId = chains.reduce(
 
 export const ChainToRPC = chains.reduce(
   (acc, chain) => {
-    acc[chain] = RPCUrl[ChainToChainName[chain]];
+    acc[chain] = getRPCUrl(chain);
     return acc;
   },
-  {} as { [key in Chain]: RPCUrl },
+  {} as { [key in Chain]: string },
 );
 
 export const ChainToHexChainId = chains.reduce(
@@ -214,7 +219,7 @@ export const ChainToHexChainId = chains.reduce(
 
 export const ChainToExplorerUrl = chains.reduce(
   (acc, chain) => {
-    acc[chain] = ExplorerUrl[ChainToChainName[chain]];
+    acc[chain] = EXPLORER_URLS[chain];
     return acc;
   },
   {} as { [key in Chain]: string },

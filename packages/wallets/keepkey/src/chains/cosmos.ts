@@ -1,10 +1,11 @@
 import type { KeepKeySdk } from "@keepkey/keepkey-sdk";
 import {
+  Chain,
   ChainId,
   DerivationPath,
   type DerivationPathArray,
-  RPCUrl,
   derivationPathToString,
+  getRPCUrl,
 } from "@swapkit/helpers";
 import type { BaseCosmosToolboxType, TransferParams } from "@swapkit/toolbox-cosmos";
 
@@ -71,7 +72,7 @@ export const cosmosWalletMethods = async ({
         decodedBytes.charCodeAt(i),
       );
 
-      const client = await createStargateClient(RPCUrl.Cosmos);
+      const client = await createStargateClient(getRPCUrl(Chain.Cosmos));
       const response = await client.broadcastTx(uint8Array);
 
       return response.transactionHash;

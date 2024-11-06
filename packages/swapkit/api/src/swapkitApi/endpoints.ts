@@ -19,13 +19,21 @@ function getBaseUrl(isDev?: boolean) {
   return isDev ? baseUrlDev : baseUrl;
 }
 
-export function getTrackerDetails(payload: TrackerParams) {
-  return RequestClient.post<TrackerResponse>(`${getBaseUrl()}/track`, { json: payload });
+export function getTrackerDetails(payload: TrackerParams, apiKey?: string) {
+  return RequestClient.post<TrackerResponse>(`${getBaseUrl()}/track`, {
+    json: payload,
+    headers: apiKey ? { "x-api-key": apiKey } : {},
+  });
 }
 
-export async function getSwapQuoteV2<T extends boolean>(searchParams: QuoteRequest, isDev?: T) {
+export async function getSwapQuoteV2<T extends boolean>(
+  searchParams: QuoteRequest,
+  isDev?: T,
+  apiKey?: string,
+) {
   const response = await RequestClient.post<QuoteResponse>(`${getBaseUrl(isDev)}/quote`, {
     json: searchParams,
+    headers: apiKey ? { "x-api-key": apiKey } : {},
   });
 
   if (response.error) {
@@ -47,17 +55,22 @@ export async function getSwapQuoteV2<T extends boolean>(searchParams: QuoteReque
   }
 }
 
-export function getTokenListProvidersV2(isDev = false) {
-  return RequestClient.get<TokenListProvidersResponse>(`${getBaseUrl(isDev)}/providers`);
+export function getTokenListProvidersV2(isDev = false, apiKey?: string) {
+  return RequestClient.get<TokenListProvidersResponse>(`${getBaseUrl(isDev)}/providers`, {
+    headers: apiKey ? { "x-api-key": apiKey } : {},
+  });
 }
 
-export function getTokenListV2(provider: ProviderName, isDev = false) {
-  return RequestClient.get<TokensResponseV2>(`${getBaseUrl(isDev)}/tokens?provider=${provider}`);
+export function getTokenListV2(provider: ProviderName, isDev = false, apiKey?: string) {
+  return RequestClient.get<TokensResponseV2>(`${getBaseUrl(isDev)}/tokens?provider=${provider}`, {
+    headers: apiKey ? { "x-api-key": apiKey } : {},
+  });
 }
 
-export async function getPrice(body: PriceRequest, isDev = false) {
+export async function getPrice(body: PriceRequest, isDev = false, apiKey?: string) {
   const response = await RequestClient.post<PriceResponse>(`${getBaseUrl(isDev)}/price`, {
     json: body,
+    headers: apiKey ? { "x-api-key": apiKey } : {},
   });
 
   try {
@@ -74,7 +87,7 @@ export async function getPrice(body: PriceRequest, isDev = false) {
 }
 
 // TODO update this once the trading pairs are supported by BE api
-export async function getTokenTradingPairs(providers: ProviderName[], isDev = false) {
+export async function getTokenTradingPairs(providers: ProviderName[], isDev = false, apiKey?: string) {
   const tradingPairs = new Map<
     string,
     {
@@ -86,7 +99,7 @@ export async function getTokenTradingPairs(providers: ProviderName[], isDev = fa
   if (!providers.length) return tradingPairs;
 
   const providerRequests = providers.map(async (provider) => {
-    const tokenList = await getTokenListV2(provider, isDev);
+    const tokenList = await getTokenListV2(provider, isDev, apiKey);
     return tokenList;
   });
 
