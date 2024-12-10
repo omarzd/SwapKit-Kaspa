@@ -1,6 +1,7 @@
 {
   "description": "SwapKit - Wallets",
   "dependencies": {
+    "@swapkit/wallet-bitget": "workspace:*",
     "@swapkit/wallet-coinbase": "workspace:*",
     "@swapkit/wallet-ctrl": "workspace:*",
     "@swapkit/wallet-evm-extensions": "workspace:*",
