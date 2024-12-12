@@ -1,7 +1,10 @@
 import crypto from "crypto";
-import { ProviderName, RequestClient, SwapKitError } from "@swapkit/helpers";
+import { AssetValue, ProviderName, RequestClient, SwapKitError } from "@swapkit/helpers";
 
 import {
+  type DepositChannelRequest,
+  type DepositChannelResponse,
+  DepositChannelResponseSchema,
   type GasResponse,
   GasResponseSchema,
   type PriceRequest,
@@ -341,4 +344,37 @@ export async function getTokenTradingPairs(
   }
 
   return tradingPairs;
+}
+
+export async function getChainflipDepositChannel({
+  isDev = false,
+  body,
+}: {
+  isDev?: boolean;
+  body: DepositChannelRequest;
+}) {
+  const { sellAsset, buyAsset, recipient } = body;
+  const sellAssetValue = AssetValue.from({ asset: sellAsset });
+  const buyAssetValue = AssetValue.from({ asset: buyAsset });
+
+  if (!(sellAssetValue && buyAssetValue && recipient)) {
+    throw new SwapKitError("chainflip_broker_invalid_params");
+  }
+  const url = `${getBaseUrl(isDev)}/channel`;
+
+  const response = await RequestClient.post<DepositChannelResponse>(url, {
+    json: body,
+  });
+
+  try {
+    const parsedResponse = DepositChannelResponseSchema.safeParse(response);
+
+    if (!parsedResponse.success) {
+      throw new SwapKitError("api_v2_invalid_response", parsedResponse.error);
+    }
+
+    return parsedResponse.data;
+  } catch (error) {
+    throw new SwapKitError("api_v2_invalid_response", error);
+  }
 }

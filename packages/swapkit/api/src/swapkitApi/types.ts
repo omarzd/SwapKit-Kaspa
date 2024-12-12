@@ -242,7 +242,10 @@ export const QuoteRequestSchema = z
           (fee) => {
             return fee === Math.floor(fee) && fee >= 0;
           },
-          { message: "affiliateFee must be a positive integer", path: ["affiliateFee"] },
+          {
+            message: "affiliateFee must be a positive integer",
+            path: ["affiliateFee"],
+          },
         ),
     ),
     allowSmartContractSender: z.optional(
@@ -288,6 +291,56 @@ export const PriceRequestSchema = z.object({
 });
 
 export type PriceRequest = z.infer<typeof PriceRequestSchema>;
+
+export const DepositChannelRequestSchema = z.object({
+  sellAsset: z.string({
+    description: "Asset to sell",
+  }),
+  buyAsset: z.string({
+    description: "Asset to buy",
+  }),
+  recipient: z.string({
+    description: "Final recipient of the swap",
+  }),
+  ccmMetadata: z.optional(
+    z.object({
+      message: z.string(),
+      gasBudget: z.string(),
+      cfParameters: z.string(),
+    }),
+  ),
+  dcaParameters: z.optional(
+    z.object({
+      chunkIntervalBlocks: z.number(),
+      numberOfChunks: z.number(),
+    }),
+  ),
+  maxBoostFeeBps: z.optional(z.number()),
+  affiliateFees: z.optional(
+    z.array(
+      z.object({
+        brokerAddress: z.string(),
+        basisPoints: z.number(),
+      }),
+    ),
+  ),
+  refundParameters: z.optional(
+    z.object({
+      retryDuration: z.number(),
+      refundAddress: z.string(),
+      minPrice: z.string(),
+    }),
+  ),
+});
+
+export type DepositChannelRequest = z.infer<typeof DepositChannelRequestSchema>;
+
+export const DepositChannelResponseSchema = z.object({
+  channelId: z.string(),
+  depositAddress: z.string(),
+});
+
+export type DepositChannelResponse = z.infer<typeof DepositChannelResponseSchema>;
 
 const TxnPayloadSchema = z.object({
   evmCalldata: z.optional(z.string()), // raw 0xcalldata
