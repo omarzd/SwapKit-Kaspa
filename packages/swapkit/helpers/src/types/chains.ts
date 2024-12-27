@@ -10,6 +10,7 @@ export enum Chain {
   Dogecoin = "DOGE",
   Ethereum = "ETH",
   Fiat = "FIAT",
+  Kaspa = "KAS",
   Kujira = "KUJI",
   Litecoin = "LTC",
   Maya = "MAYA",
@@ -42,10 +43,11 @@ export enum ChainId {
   Cosmos = "cosmoshub-4",
   Dash = "dash",
   Dogecoin = "dogecoin",
-  Kujira = "kaiyo-1",
   Ethereum = "1",
   EthereumHex = "0x1",
   Fiat = "fiat",
+  Kaspa = "kaspa",
+  Kujira = "kaiyo-1",
   Litecoin = "litecoin",
   Maya = "mayachain-mainnet-v1",
   MayaStagenet = "mayachain-stagenet-v1",
@@ -75,10 +77,11 @@ export const ChainIdToChain: Record<ChainId, Chain> = {
   [ChainId.Cosmos]: Chain.Cosmos,
   [ChainId.Dash]: Chain.Dash,
   [ChainId.Dogecoin]: Chain.Dogecoin,
+  [ChainId.Ethereum]: Chain.Ethereum,
   [ChainId.EthereumHex]: Chain.Ethereum,
   [ChainId.Fiat]: Chain.Fiat,
+  [ChainId.Kaspa]: Chain.Kaspa,
   [ChainId.Kujira]: Chain.Kujira,
-  [ChainId.Ethereum]: Chain.Ethereum,
   [ChainId.Litecoin]: Chain.Litecoin,
   [ChainId.MayaStagenet]: Chain.Maya,
   [ChainId.Maya]: Chain.Maya,
@@ -111,6 +114,7 @@ export const BaseDecimal: Record<Chain, number> = {
   FIAT: 2,
   FLIP: 18,
   GAIA: 6,
+  KAS: 8,
   KUJI: 6,
   LTC: 8,
   MATIC: 18,
@@ -134,6 +138,7 @@ export const BlockTimes: Record<Partial<Chain>, number> = {
   [Chain.Dogecoin]: 600,
   [Chain.Ethereum]: 12.5,
   [Chain.Fiat]: 60,
+  [Chain.Kaspa]: 1,
   [Chain.Kujira]: 2.2,
   [Chain.Litecoin]: 150,
   [Chain.Maya]: 6,
@@ -183,6 +188,9 @@ export const UTXOChains = [
 export type CosmosChain = Chain.Cosmos | Chain.THORChain | Chain.Maya | Chain.Kujira;
 export const CosmosChains = [Chain.Cosmos, Chain.THORChain, Chain.Maya, Chain.Kujira] as const;
 
+export type KaspaChain = Chain.Kaspa;
+export const KaspaChains = [Chain.Kaspa] as const;
+
 export const TCSupportedChains = [
   Chain.Avalanche,
   Chain.BinanceSmartChain,
@@ -217,6 +225,7 @@ export const RPC_URLS: Record<Chain | StagenetChain, string> = {
   [Chain.Dogecoin]: "https://node-router.thorswap.net/dogecoin",
   [Chain.Ethereum]: "https://ethereum-rpc.publicnode.com",
   [Chain.Fiat]: "",
+  [Chain.Kaspa]: "wss://kas-node-wss-01.kaspacalc.com",
   [Chain.Kujira]: "https://rpc-kujira.synergynodes.com/",
   [Chain.Litecoin]: "https://node-router.thorswap.net/litecoin",
   [Chain.Maya]: "https://tendermint.mayachain.info",
@@ -255,6 +264,7 @@ export const FALLBACK_URLS: Record<Chain | StagenetChain, string[]> = {
   [Chain.Dogecoin]: ["https://doge.getblock.io/mainnet", "https://dogecoin.publicnode.com"],
   [Chain.Ethereum]: ["https://eth.llamarpc.com", "https://rpc.ankr.com/eth"],
   [Chain.Fiat]: [],
+  [Chain.Kaspa]: ["wss://kas-node-wss-01.kaspacalc.com", "wss://kas-node-wss-02.kaspacalc.com"],
   [Chain.Kujira]: ["https://kujira-rpc.polkachu.com", "https://kujira-rpc.ibs.team"],
   [Chain.Litecoin]: ["https://ltc.getblock.io/mainnet", "https://litecoin.publicnode.com"],
   [Chain.Maya]: ["https://tendermint.mayachain.info", "https://maya-tendermint.publicnode.com"],
@@ -284,6 +294,7 @@ export const EXPLORER_URLS: Record<Chain, string> = {
   [Chain.Dogecoin]: "https://blockchair.com/dogecoin",
   [Chain.Ethereum]: "https://etherscan.io",
   [Chain.Fiat]: "",
+  [Chain.Kaspa]: "https://explorer.kaspa.org",
   [Chain.Kujira]: "https://finder.kujira.network/kaiyo-1",
   [Chain.Litecoin]: "https://blockchair.com/litecoin",
   [Chain.Maya]: "https://www.mayascan.org",
@@ -328,7 +339,15 @@ const getRpcBody = (chain: Chain | StagenetChain) => {
         params: [],
       };
     case Chain.Cosmos:
-    case Chain.Kujira:
+    case Chain.Kaspa:
+      return {
+        jsonrpc: "2.0",
+        method: "getInfo",
+        params: [],
+        id: "test",
+        encoding: "borsh"
+      };
+	case Chain.Kujira:
     case Chain.Maya:
     case Chain.THORChain:
     case StagenetChain.Maya:
