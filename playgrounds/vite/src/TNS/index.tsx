@@ -1,4 +1,4 @@
-import { AssetValue, Chain, SwapKitApi, type THORNameDetails } from "@swapkit/sdk";
+import { AllChains, AssetValue, Chain, getExplorerTxUrl, SwapKitApi, type THORNameDetails } from "@swapkit/sdk";
 import { useCallback, useState } from "react";
 import type { SwapKitClient } from "../swapKitClient";
 
@@ -9,7 +9,7 @@ export default function TNS({ skClient }: { skClient: SwapKitClient }) {
   const [tnsDetail, setTnsDetail] = useState<THORNameDetails>();
 
   const checkTns = useCallback(async () => {
-    const tnsDetail = await SwapKitApi.getTHORNameDetails(tnsSearch);
+    const tnsDetail = await SwapKitApi.thorchainMidgard.getNameDetails(tnsSearch);
     setTnsDetail(tnsDetail);
   }, [tnsSearch]);
 
@@ -18,14 +18,14 @@ export default function TNS({ skClient }: { skClient: SwapKitClient }) {
     const address = skClient.getAddress(selectedChain);
 
     try {
-      const txHash = await skClient.thorchain.registerTHORName({
-        assetValue: AssetValue.from({ chain: Chain.THORChain, value: 1 }),
+      const txHash = await skClient.thorchain.registerName({
         address,
-        name,
+        assetValue: AssetValue.from({ chain: Chain.THORChain, value: 1 }),
         chain: selectedChain,
+        name,
       });
 
-      window.open(`${skClient.getExplorerTxUrl({ chain: Chain.THORChain, txHash })}`, "_blank");
+      window.open(`${getExplorerTxUrl({ chain: Chain.THORChain, txHash })}`, "_blank");
     } catch (e) {
       console.error(e);
       alert(e);
@@ -47,16 +47,11 @@ export default function TNS({ skClient }: { skClient: SwapKitClient }) {
       </div>
 
       <div style={{ cursor: skClient ? "default" : "not-allowed" }}>
-        <div
-          style={{
-            pointerEvents: skClient ? "all" : "none",
-            opacity: skClient ? 1 : 0.5,
-          }}
-        >
+        <div style={{ opacity: skClient ? 1 : 0.5, pointerEvents: skClient ? "all" : "none" }}>
           <div style={{ display: "flex", flex: 1, flexDirection: "row" }}>
             <div>
               <select onChange={(e) => setSelectedChain(e.target.value as Chain)}>
-                {Object.values(Chain).map((chain) => (
+                {AllChains.map((chain) => (
                   <option key={chain} value={chain}>
                     {chain}
                   </option>

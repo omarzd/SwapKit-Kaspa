@@ -4,13 +4,8 @@
 
 ## Usage
 
-### Documentation
+[Documentation](https://swapkit.github.io/SwapKit)
 
-- [Getting Started](https://docs.thorswap.finance/swapkit-docs)
-
-- [Packages](https://docs.thorswap.finance/swapkit-docs/swapkit-sdk/packages)
-- [Wallets](https://docs.thorswap.finance/swapkit-docs/swapkit-sdk/wallets)
-- [Toolboxes](https://docs.thorswap.finance/swapkit-docs/swapkit-sdk/toolboxes)
 
 ## Packages
 

@@ -3,20 +3,24 @@ name: Check Token List
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0,12 * * *"
+    - cron: "0 9 * * 1"
 
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
       - name: Setup Repo
         uses: ./tools/github/setup-repo
 
       - name: Generate new token list
         id: commit
         run: |
-          bun run build
+          bun build:ci
           bun generate:tokens
           changes=$(git status -s | wc -l | xargs)
           echo "numberOfChangedFiles=$changes" >> $GITHUB_OUTPUT
@@ -24,8 +28,8 @@ jobs:
           if [ $changes != 0 ]; then
             echo "Changed files found, pushing to bot/token-list-update"
 
-            git config --global user.email "swapkit-bot@thorswap.finance"
-            git config --global user.name "swapkit-bot"
+            git config --global user.email "swapkit@users.noreply.github.com"
+            git config --global user.name "swapkit"
             git checkout -b bot/token-list-update
             git add .
             git commit -m "🤖: automatic tokenlist update"
@@ -35,7 +39,7 @@ jobs:
           fi
 
       - name: Open Pull Request
-        if: ${{ steps.commit.outputs.numberOfChangedFiles > 0 }}
+        if: steps.commit.outputs.numberOfChangedFiles > 0
         uses: devops-infra/action-pull-request@34a042a4b1cc7073122455aee6ffc76ccf9d9039
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -44,20 +48,3 @@ jobs:
           title: "[Bot] Update Token List"
           label: token-list
           get_diff: true
-
-      # TODO: figure out how to create changeset from cli
-      # - name: Publish Token List
-      #   if: ${{ steps.commit.outputs.numberOfChangedFiles > 0 }}
-      #   run: |
-      #     git config --global user.email "swapkit-bot@thorswap.finance"
-      #     git config --global user.name "swapkit-bot"
-      #     cp .npmrc.prod ./packages/swapkit/tokens/.npmrc
-      #     bun changeset version --snapshot nightly
-      #     cd packages/swapkit/tokens
-      #     npm config list --no-workspaces
-      #     npm publish --no-workspaces
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     NPM_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-

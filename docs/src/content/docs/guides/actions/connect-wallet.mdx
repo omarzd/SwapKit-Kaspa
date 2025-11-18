@@ -1,0 +1,403 @@
+---
+title: Connecting Wallets
+description: How to connect different types of wallets with SwapKit
+---
+
+import WalletConnectionDemo from "../../../../components/WalletConnectionDemo.astro";
+import TryItYourself from "../../../../components/TryItYourself.astro";
+import PlaygroundLinks from "../../../../components/PlaygroundLinks.astro";
+
+SwapKit provides multiple ways to connect wallets for different blockchain networks. This guide demonstrates how to connect various wallet types using both granular and all-in-one approaches.
+
+<WalletConnectionDemo
+  chains={["Ethereum", "Bitcoin", "Thorchain", "Cosmos"]}
+  walletTypes={["MetaMask", "Keystore", "WalletConnect", "Keplr"]}
+/>
+
+## Two Approaches to Using SwapKit
+
+You can use SwapKit in two ways:
+
+1. **Granular approach** - Import only what you need from individual packages:
+
+   ```ts
+   import { SwapKit, keystoreWallet } from "@swapkit/sdk";
+   ```
+
+2. **All-in-one approach** - Import everything from the SDK (better for backend/Node.js):
+   ```ts
+   import { createSwapKit } from "@swapkit/sdk";
+   ```
+
+The granular approach is recommended for frontend applications as it results in smaller bundle sizes.
+
+## Initialize SwapKit
+
+### Granular Approach (Frontend Recommended)
+
+```ts twoslash
+import { SwapKit, keystoreWallet, ledgerWallet, evmWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  config: {
+    apiKeys: {
+      swapKit: "your-swapkit-api-key",
+      walletConnectProjectId: "your-walletconnect-project-id",
+    },
+  },
+  wallets: { ...keystoreWallet, ...ledgerWallet, ...evmWallet },
+});
+```
+
+### All-in-one Approach (Backend/Node.js)
+
+```ts twoslash
+import { createSwapKit } from "@swapkit/sdk";
+
+const swapKit = createSwapKit({
+  config: {
+    apiKeys: {
+      swapKit: "your-swapkit-api-key",
+      walletConnectProjectId: "your-walletconnect-project-id",
+    },
+  },
+});
+```
+
+## Connect with Keystore Wallet
+
+### Granular Approach
+
+```ts twoslash
+import {
+  Chain,
+  SwapKit,
+  keystoreWallet,
+  decryptFromKeystore,
+  type Keystore,
+} from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...keystoreWallet },
+});
+
+async function connectWithKeystore(
+  keystoreFile: Keystore,
+  password: string,
+  chains: Chain[]
+) {
+  try {
+    const phrase = await decryptFromKeystore(keystoreFile, password);
+
+    await swapKit.connectKeystore(chains, phrase);
+
+    const balances = await Promise.all(
+      chains.map(async (chain) => {
+        const wallet = await swapKit.getWalletWithBalance(chain);
+        return wallet.balance;
+      })
+    );
+
+    return { success: true, balances };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+
+const chains = [Chain.Ethereum, Chain.Bitcoin, Chain.Ripple];
+await connectWithKeystore(keystoreFile, password, chains);
+```
+
+### All-in-one Approach
+
+```ts twoslash
+import {
+  Chain,
+  createSwapKit,
+  decryptFromKeystore,
+  type Keystore,
+} from "@swapkit/sdk";
+
+const swapKit = createSwapKit();
+
+async function connectWithKeystore(
+  keystoreFile: Keystore,
+  password: string,
+  chains: Chain[]
+) {
+  try {
+    const phrase = await decryptFromKeystore(keystoreFile, password);
+
+    await swapKit.connectKeystore(chains, phrase);
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+## Using Hardware Wallets
+
+### Ledger Wallet
+
+```ts twoslash
+import { Chain, SwapKit, ledgerWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...ledgerWallet },
+});
+
+async function connectLedger(chains: Chain[]) {
+  try {
+    await swapKit.connectLedger(chains);
+
+    const ethAddress = swapKit.getAddress(Chain.Ethereum);
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+### Trezor Wallet
+
+```ts twoslash
+import {
+  Chain,
+  NetworkDerivationPath,
+  SwapKit,
+  trezorWallet,
+} from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...trezorWallet },
+});
+
+async function connectTrezor(chains: Chain[]) {
+  try {
+    await swapKit.connectTrezor([Chain.Bitcoin], NetworkDerivationPath.BTC);
+
+    const btcWallet = await swapKit.getWalletWithBalance(Chain.Bitcoin);
+
+    return { success: true, balance: btcWallet.balance };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+## Using Browser Extension Wallets
+
+### MetaMask / EVM Wallets
+
+```ts twoslash
+import { Chain, SwapKit, evmWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...evmWallet },
+});
+
+async function connectEVMWallet() {
+  try {
+    await swapKit.connectEVMWallet([Chain.Ethereum, Chain.BinanceSmartChain]);
+
+    const address = swapKit.getAddress(Chain.Ethereum);
+
+    return { success: true, address };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+### Keplr (Cosmos) Wallet
+
+```ts twoslash
+import { Chain, SwapKit, keplrWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...keplrWallet },
+});
+
+async function connectKeplr() {
+  try {
+    await swapKit.connectKeplr([Chain.Cosmos]);
+
+    const address = swapKit.getAddress(Chain.Cosmos);
+
+    return { success: true, address };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+### Cosmostation (Cosmos) Wallet
+
+```ts twoslash
+import { Chain, SwapKit, cosmostationWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...cosmostationWallet },
+});
+
+async function connectCosmostation() {
+  try {
+    await swapKit.connectCosmostation([Chain.Cosmos, Chain.THORChain]);
+
+    const address = swapKit.getAddress(Chain.Cosmos);
+
+    return { success: true, address };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+### Phantom (Solana) Wallet
+
+```ts twoslash
+import { Chain, SwapKit, phantomWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...phantomWallet },
+});
+
+async function connectPhantom() {
+  try {
+    await swapKit.connectPhantom([Chain.Solana]);
+
+    const address = swapKit.getAddress(Chain.Solana);
+
+    return { success: true, address };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+## Managing Wallet Connections
+
+```ts twoslash
+import { Chain, SwapKit, evmWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...evmWallet },
+});
+
+function getAllWallets() {
+  const wallets = swapKit.getAllWallets();
+  return wallets;
+}
+
+function disconnectChain(chain: Chain) {
+  swapKit.disconnectChain(chain);
+}
+
+function disconnectAll() {
+  swapKit.disconnectAll();
+}
+```
+
+## Getting Wallet Balances
+
+```ts twoslash
+import { Chain, SwapKit, evmWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...evmWallet },
+});
+
+await swapKit.connectEVMWallet([Chain.Ethereum]);
+
+async function getChainBalance(chain: Chain) {
+  const balance = await swapKit.getBalance(chain, true);
+  return balance;
+}
+
+async function getAllBalances(chains: Chain[]) {
+  const balances = await Promise.all(
+    chains.map(async (chain) => {
+      try {
+        const wallet = await swapKit.getWalletWithBalance(chain);
+        return { chain, balance: wallet.balance };
+      } catch (error) {
+        return { chain, balance: [], error };
+      }
+    })
+  );
+
+  return balances;
+}
+```
+
+## Using WalletConnect
+
+```ts twoslash
+import { Chain, SwapKit, walletconnectWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  config: {
+    apiKeys: {
+      walletConnectProjectId: "YOUR_WALLETCONNECT_PROJECT_ID",
+    },
+  },
+  wallets: { ...walletconnectWallet },
+});
+
+async function connectWalletConnect() {
+  try {
+    await swapKit.connectWalletconnect([
+      Chain.Ethereum,
+      Chain.BinanceSmartChain,
+      Chain.Cosmos,
+    ]);
+
+    const ethAddress = swapKit.getAddress(Chain.Ethereum);
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```
+
+## Advanced: Connecting Multiple Wallets
+
+```ts twoslash
+import {
+  Chain,
+  SwapKit,
+  evmWallet,
+  keplrWallet,
+  keystoreWallet,
+} from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...evmWallet, ...keplrWallet, ...keystoreWallet },
+});
+
+async function connectMultipleWallets(phrase: string) {
+  try {
+    await swapKit.connectEVMWallet([Chain.Ethereum]);
+
+    await swapKit.connectKeplr([Chain.Cosmos]);
+
+    await swapKit.connectKeystore([Chain.Bitcoin], phrase);
+
+    const wallets = swapKit.getAllWallets();
+
+    const addresses = {
+      [Chain.Ethereum]: swapKit.getAddress(Chain.Ethereum),
+      [Chain.Cosmos]: swapKit.getAddress(Chain.Cosmos),
+      [Chain.Bitcoin]: swapKit.getAddress(Chain.Bitcoin),
+    };
+
+    return { success: true, addresses };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+```

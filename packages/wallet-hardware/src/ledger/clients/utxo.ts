@@ -1,0 +1,154 @@
+import type BitcoinApp from "@ledgerhq/hw-app-btc";
+import type { CreateTransactionArg } from "@ledgerhq/hw-app-btc/lib-es/createTransaction";
+import { type DerivationPathArray, derivationPathToString, getWalletFormatFor, SwapKitError } from "@swapkit/helpers";
+import type { UTXOType } from "@swapkit/toolboxes/utxo";
+import type { Psbt } from "bitcoinjs-lib";
+
+import { getLedgerTransport } from "../helpers/getLedgerTransport";
+
+const nonSegwitLedgerChains = ["bitcoin-cash", "dash", "dogecoin", "zcash"];
+
+type Params = {
+  psbt: Psbt;
+  inputUtxos: UTXOType[];
+  btcApp: BitcoinApp;
+  derivationPath: string;
+  chain: "bitcoin-cash" | "bitcoin" | "litecoin" | "dogecoin" | "dash" | "zcash";
+};
+
+const signUTXOTransaction = (
+  { psbt, inputUtxos, btcApp, derivationPath, chain }: Params,
+  options?: Partial<CreateTransactionArg>,
+) => {
+  const inputs = inputUtxos.map((item) => {
+    const splitTx = btcApp.splitTransaction(
+      item.txHex || "",
+      !nonSegwitLedgerChains.includes(chain),
+      chain === "zcash",
+    );
+
+    return [splitTx, item.index, undefined as string | null | undefined, undefined as number | null | undefined] as any;
+  });
+
+  const newTxHex = psbt.data.globalMap.unsignedTx.toBuffer().toString("hex");
+
+  const splitNewTx = btcApp.splitTransaction(newTxHex, true);
+  const outputScriptHex = btcApp.serializeTransactionOutputs(splitNewTx).toString("hex");
+
+  const params: CreateTransactionArg = {
+    additionals: ["bech32"],
+    associatedKeysets: inputs.map(() => derivationPath),
+    inputs,
+    outputScriptHex,
+    segwit: true,
+    useTrustedInputForSegwit: true,
+  };
+
+  return btcApp.createPaymentTransaction({ ...params, ...options });
+};
+
+const BaseLedgerUTXO = ({
+  chain,
+  additionalSignParams,
+}: {
+  chain: "bitcoin-cash" | "bitcoin" | "litecoin" | "dogecoin" | "dash" | "zcash";
+  additionalSignParams?: Partial<CreateTransactionArg>;
+}) => {
+  let btcApp: InstanceType<typeof BitcoinApp>;
+  let transport: any = null;
+
+  async function checkBtcAppAndCreateTransportWebUSB(checkBtcApp = true) {
+    if (checkBtcApp && !btcApp) {
+      new SwapKitError("wallet_ledger_connection_error", {
+        message: `Ledger connection failed:\n${JSON.stringify({ btcApp, checkBtcApp })}`,
+      });
+    }
+
+    transport ||= await getLedgerTransport();
+  }
+
+  async function createTransportWebUSB() {
+    transport = await getLedgerTransport();
+    const BitcoinApp = (await import("@ledgerhq/hw-app-btc")).default;
+
+    btcApp = new BitcoinApp({ currency: chain, transport });
+  }
+
+  return (derivationPathArray?: DerivationPathArray | string) => {
+    const derivationPath =
+      typeof derivationPathArray === "string"
+        ? derivationPathArray
+        : derivationPathToString(derivationPathArray as DerivationPathArray);
+
+    const format = getWalletFormatFor(derivationPath);
+
+    return {
+      connect: async () => {
+        await checkBtcAppAndCreateTransportWebUSB(false);
+        const BitcoinApp = (await import("@ledgerhq/hw-app-btc")).default;
+
+        btcApp = new BitcoinApp({ currency: chain, transport });
+      },
+      getAddress: async () => {
+        const { toCashAddress } = await import("@swapkit/toolboxes/utxo");
+
+        await checkBtcAppAndCreateTransportWebUSB(false);
+
+        const { bitcoinAddress: address } = await btcApp.getWalletPublicKey(derivationPath, { format });
+
+        if (!address) {
+          throw new SwapKitError("wallet_ledger_get_address_error", {
+            message: `Cannot get ${chain} address from ledger derivation path: ${derivationPath}`,
+          });
+        }
+
+        return chain === "bitcoin-cash" && format === "legacy"
+          ? toCashAddress(address).replace(/(bchtest:|bitcoincash:)/, "")
+          : address;
+      },
+      getExtendedPublicKey: async (path = "84'/0'/0'", xpubVersion = 76067358) => {
+        await checkBtcAppAndCreateTransportWebUSB(false);
+
+        return btcApp.getWalletXpub({ path, xpubVersion });
+      },
+      signTransaction: async (psbt: Psbt, inputUtxos: UTXOType[]) => {
+        await createTransportWebUSB();
+
+        return signUTXOTransaction({ btcApp, chain, derivationPath, inputUtxos, psbt }, additionalSignParams);
+      },
+    };
+  };
+};
+
+export const BitcoinLedger = BaseLedgerUTXO({ chain: "bitcoin" });
+export const LitecoinLedger = BaseLedgerUTXO({ chain: "litecoin" });
+
+export const BitcoinCashLedger = BaseLedgerUTXO({
+  additionalSignParams: { additionals: ["abc"], segwit: false, sigHashType: 0x41 },
+  chain: "bitcoin-cash",
+});
+
+export const DogecoinLedger = BaseLedgerUTXO({
+  additionalSignParams: { additionals: [], segwit: false, useTrustedInputForSegwit: false },
+  chain: "dogecoin",
+});
+
+export const DashLedger = BaseLedgerUTXO({
+  additionalSignParams: { additionals: [], segwit: false, useTrustedInputForSegwit: false },
+  chain: "dash",
+});
+
+export const ZcashLedger = BaseLedgerUTXO({
+  additionalSignParams: {
+    additionals: ["zcash", "sapling"],
+    expiryHeight: (() => {
+      const buf = Buffer.allocUnsafe(4);
+      buf.writeUInt32LE(0);
+      return buf;
+    })(),
+    lockTime: 0,
+    segwit: false,
+    useTrustedInputForSegwit: false,
+  },
+  chain: "zcash",
+});

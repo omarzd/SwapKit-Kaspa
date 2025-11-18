@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - beta
+      - nightly
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    env:
+      TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Repo
+        uses: ./tools/github/setup-repo
+
+      - run: bun build:ci
+      - run: bun lint
+      - run: bun type-check:ci
+
+      - name: Test
+        if: github.ref_name == 'nightly'
+        run: bun test:ci
+
+  publish:
+    needs: [build-lint-test]
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Repo
+        uses: ./tools/github/setup-repo
+
+      - run: bun build:ci
+
+      - name: Copy npmrc config
+        run: cp .npmrc.prod .npmrc
+
+      - name: Set job params
+        shell: bash
+        id: deployment-params
+        run: |
+          git config --global user.email "swapkit@users.noreply.github.com"
+          git config --global user.name "swapkit"
+          echo "publishName=${{ github.ref_name == 'develop' && 'Release' || github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - name: Exit pre changeset
+        if: github.ref_name == 'nightly'
+        continue-on-error: true
+        run: bun changeset pre exit
+
+      - name: Change nightly changeset
+        if: github.ref_name == 'nightly'
+        run: bun changeset version --snapshot nightly
+
+      - name: Change beta changeset
+        if: github.ref_name == 'beta'
+        continue-on-error: true
+        run: bun changeset pre enter beta
+
+      - name: Create Pull Request or Publish to npm
+        id: changesets
+        if: github.ref_name == 'develop'
+        uses: changesets/action@v1.4.10
+        with:
+          title: ":tada: Publish ${{ steps.deployment-params.outputs.publishName }}"
+          version: bun version-bump
+          publish: bun publish-packages
+          setupGitUser: false
+          createGithubReleases: false
+
+      - name: Publish Beta to npm
+        if: github.ref_name == 'beta'
+        uses: changesets/action@v1.4.10
+        with:
+          title: ":tada: Publish Beta"
+          version: bun version-bump
+          publish: bun publish-packages --no-git-tag
+          setupGitUser: false
+          createGithubReleases: false
+
+      - name: Publish Nightly to npm
+        if: github.ref_name == 'nightly'
+        uses: changesets/action@v1.4.10
+        with:
+          title: ":tada: Publish Nightly"
+          version: bun version-bump
+          publish: bun publish-packages --tag nightly --no-git-tag
+          setupGitUser: false
+          createGithubReleases: false
+
+  build-docs:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'develop'
+    needs: [build-lint-test]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Repo
+        uses: ./tools/github/setup-repo
+
+      - run: bun build:ci
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install, build, and upload your site
+        uses: withastro/action@v4
+        with:
+          path: ./docs
+          package-manager: bun
+
+  deploy:
+    needs: [build-docs]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: steps.deployment.outputs.page_url
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

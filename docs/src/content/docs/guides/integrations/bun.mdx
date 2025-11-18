@@ -1,0 +1,238 @@
+---
+title: Bun + React
+description: A guide to integrate SwapKit with Bun and React applications.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+This guide will help you integrate SwapKit into your Bun-powered React application. Bun is a fast JavaScript runtime that includes a bundler, test runner, and package manager.
+
+## Installation
+
+Install SwapKit:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="bun" icon="bun">
+    ```bash bun add @swapkit/sdk ```
+  </TabItem>
+  <TabItem label="pnpm">```bash pnpm add @swapkit/sdk ```</TabItem>
+  <TabItem label="npm">```bash npm install @swapkit/sdk ```</TabItem>
+  <TabItem label="yarn">```bash yarn add @swapkit/sdk ```</TabItem>
+</Tabs>
+
+## Project Setup
+
+Create a new Bun + React project:
+
+```bash
+bun create react my-swapkit-app
+cd my-swapkit-app
+```
+
+## Basic Configuration
+
+Create a `bunfig.toml` file for Bun configuration:
+
+```toml
+[serve.static]
+plugins = ["bun-plugin-tailwind"]
+env = "BUN_PUBLIC_*"
+```
+
+## Server Setup
+
+Create a server file to serve your React application:
+
+```tsx
+
+
+import { serve } from "bun";
+
+const PORT = process.env.PORT || 3000;
+
+serve({
+  port: PORT,
+  async fetch(req) {
+    const url = new URL(req.url);
+
+
+    if (url.pathname === "/") {
+      return new Response(Bun.file("pages/index.html"));
+    }
+
+
+    if (url.pathname.startsWith("/api/")) {
+
+    }
+
+
+    return new Response("Not Found", { status: 404 });
+  },
+});
+
+console.log(`Server running at http:
+```
+
+## React Application Setup
+
+Create your main React application with SwapKit:
+
+```tsx
+import { useState } from "react";
+import { createSwapKit, Chain, WalletOption } from "@swapkit/sdk";
+
+const swapKit = createSwapKit();
+
+export function App() {
+  const [isConnected, setIsConnected] = useState(false);
+  const [address, setAddress] = useState<string>("");
+
+  const connectWallet = async () => {
+    try {
+      await swapKit.connectEVMWallet([Chain.Ethereum], WalletOption.METAMASK);
+
+      setIsConnected(true);
+      const ethAddress = await swapKit.getAddress(Chain.Ethereum);
+      setAddress(ethAddress);
+    } catch (error) {
+      console.error("Failed to connect wallet:", error);
+    }
+  };
+
+  const disconnectWallet = () => {
+    swapKit.disconnectWallet(Chain.Ethereum);
+    setIsConnected(false);
+    setAddress("");
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-4">SwapKit + Bun</h1>
+      {!isConnected ? (
+        <button
+          onClick={connectWallet}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Connect Wallet
+        </button>
+      ) : (
+        <div>
+          <p className="mb-4">Connected: {address}</p>
+          <button
+            onClick={disconnectWallet}
+            className="px-4 py-2 bg-red-500 text-white rounded"
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Entry Point
+
+Create the entry point for your React application:
+
+```tsx
+import { createRoot } from "react-dom/client";
+import { App } from "../src/App";
+import "../styles/index.css";
+
+const container = document.getElementById("root");
+if (container) {
+  const root = createRoot(container);
+  root.render(<App />);
+}
+```
+
+## HTML Template
+
+Create an HTML template:
+
+```html
+<!-- pages/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SwapKit + Bun</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/pages/index.tsx"></script>
+  </body>
+</html>
+```
+
+## Build Configuration
+
+Create a build script for production:
+
+```typescript
+// @noErrorValidation
+
+import { build } from "bun";
+
+await build({
+  entrypoints: ["./pages/index.tsx"],
+  outdir: "./dist",
+  target: "browser",
+  minify: true,
+  splitting: true,
+  sourcemap: "external",
+});
+```
+
+## Environment Variables
+
+Bun uses `BUN_PUBLIC_` prefix for client-side environment variables:
+
+```bash
+# .env
+BUN_PUBLIC_SWAPKIT_API_KEY=your_api_key_here
+BUN_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
+```
+
+Access them in your code:
+
+```typescript
+// @noErrorValidation
+
+import { SKConfig } from "@swapkit/sdk";
+
+if (process.env.BUN_PUBLIC_SWAPKIT_API_KEY) {
+  SKConfig.setApiKey("swapKit", process.env.BUN_PUBLIC_SWAPKIT_API_KEY);
+}
+```
+
+## Common Issues
+
+### Module Resolution
+
+Bun handles module resolution differently than Node.js. If you encounter issues:
+
+1. Clear the cache: `bun clean`
+2. Reinstall dependencies: `bun install`
+
+### TypeScript Configuration
+
+Bun supports TypeScript out of the box. Create a `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "types": ["bun-types"]
+  }
+}
+```
+
+## Example Repository
+
+For a complete working example, check out the [Bun + React playground](https:

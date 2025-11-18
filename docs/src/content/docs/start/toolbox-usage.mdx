@@ -1,0 +1,720 @@
+---
+title: Toolbox Usage
+description: Direct blockchain operations with SwapKit toolboxes
+---
+
+SwapKit toolboxes provide low-level blockchain operations for all supported chains. While the main SwapKit SDK handles most operations automatically, toolboxes give you direct access to chain-specific functionality when you need fine-grained control.
+
+## When to Use Toolboxes
+
+Use toolboxes when you need:
+
+- Direct control over transaction building
+- Custom signing logic
+- Read-only operations without full SDK
+- Minimal bundle size (import only what you need)
+- Integration with existing wallet infrastructure
+
+For most use cases, the [main SDK](/start/getting-started) is recommended as it handles [configuration](/start/configuration), [wallet connections](/guides/actions/connect-wallet), and provides a unified interface.
+
+## Available Toolboxes
+
+SwapKit provides specialized toolboxes for different blockchain ecosystems:
+
+- **EVM Toolbox**: For Ethereum, BSC, Arbitrum, Avalanche, Polygon, Optimism, Base, etc.
+- **UTXO Toolbox**: For Bitcoin, Bitcoin Cash, Litecoin, Dogecoin, Dash, Zcash
+- **Cosmos Toolbox**: For ATOM, THORChain, Maya, Kujira, etc.
+- **Solana Toolbox**: For Solana blockchain
+- **Substrate Toolbox**: For Polkadot, Chainflip, etc.
+- **Radix Toolbox**: For Radix ecosystem
+- **Ripple Toolbox**: For XRP Ledger
+- **NEAR Toolbox**: For NEAR Protocol
+
+Each toolbox can be imported individually, which is preferred for frontend applications to minimize bundle size.
+
+## Importing Toolboxes
+
+Before using toolboxes, make sure you understand [Core Concepts](/start/core-concepts) like [Chain identifiers](/start/core-concepts#chain-types) and [AssetValue](/start/core-concepts#assetvalue).
+
+You can initialize a toolbox either by importing specific toolbox methods like `getEvmToolbox` or `getUtxoToolbox` or by common toolbox method `getToolbox`.
+
+```ts twoslash
+import { Chain, getEvmToolbox, getUtxoToolbox } from "@swapkit/sdk";
+
+const ethToolbox = await getEvmToolbox(Chain.Ethereum);
+const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+```
+
+or
+
+```ts twoslash
+import { Chain, getToolbox } from "@swapkit/sdk";
+
+const ethToolbox = await getToolbox(Chain.Ethereum);
+const btcToolbox = await getToolbox(Chain.Bitcoin);
+```
+
+## EVM Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import { Chain, getEvmToolbox, getProvider } from "@swapkit/sdk";
+import { ethers } from "ethers";
+
+const ethereumToolbox = await getEvmToolbox(Chain.Ethereum);
+
+const provider = await getProvider(Chain.Ethereum);
+
+const signer = new ethers.Wallet("your-private-key-here", provider);
+const signingToolbox = await getEvmToolbox(Chain.Ethereum, {
+  signer,
+});
+```
+
+### Common Methods
+
+#### Address Validation
+
+```ts twoslash
+import { Chain, evmValidateAddress } from "@swapkit/sdk";
+
+const isValidAddress = evmValidateAddress({
+  address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+});
+```
+
+#### Token Transfers
+
+```ts twoslash
+import {
+  AssetValue,
+  Chain,
+  FeeOption,
+  getEvmToolbox,
+  getProvider,
+} from "@swapkit/sdk";
+import { ethers } from "ethers";
+
+async function transferTokens() {
+  const provider = await getProvider(Chain.Ethereum);
+  const signer = new ethers.Wallet("your-private-key", provider);
+
+  const ethToolbox = await getEvmToolbox(Chain.Ethereum, {
+    provider,
+    signer,
+  });
+
+  const tokenAmount = AssetValue.from({
+    chain: Chain.Ethereum,
+    symbol: "USDC",
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    value: "10",
+  });
+
+  const txHash = await ethToolbox.transfer({
+    assetValue: tokenAmount,
+    recipient: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    from: signer.address,
+    feeOptionKey: FeeOption.Fast,
+  });
+
+  return txHash;
+}
+```
+
+#### Smart Contract Interactions
+
+```ts twoslash
+import { Chain, erc20ABI, getEvmToolbox, getProvider } from "@swapkit/sdk";
+import { ethers } from "ethers";
+
+async function interactWithContract() {
+  const provider = await getProvider(Chain.Ethereum);
+  const signer = new ethers.Wallet("your-private-key", provider);
+
+  const ethToolbox = await getEvmToolbox(Chain.Ethereum, {
+    provider,
+    signer,
+  });
+
+  const contractAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+  const tokenName = await ethToolbox.call<string>({
+    contractAddress,
+    abi: erc20ABI,
+    funcName: "name",
+  });
+
+  const balance = await ethToolbox.call<number>({
+    contractAddress,
+    abi: erc20ABI,
+    funcName: "balanceOf",
+    funcParams: [signer.address],
+  });
+
+  const decimals = await ethToolbox.call<number>({
+    contractAddress,
+    abi: erc20ABI,
+    funcName: "decimals",
+  });
+
+  const formattedBalance = ethers.formatUnits(balance, decimals);
+
+  const transferResult = await ethToolbox.call<string>({
+    contractAddress,
+    abi: erc20ABI,
+    funcName: "transfer",
+    funcParams: [
+      "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+      ethers.parseUnits("1.0", decimals),
+    ],
+  });
+
+  return {
+    name: tokenName,
+    balance: formattedBalance,
+    transferTx: transferResult,
+  };
+}
+```
+
+#### Fee Estimation
+
+```ts twoslash
+import { Chain, FeeOption, getEvmToolbox } from "@swapkit/sdk";
+import { ethers } from "ethers";
+
+async function estimateFees() {
+  const ethToolbox = await getEvmToolbox(Chain.Ethereum);
+
+  const transaction = {
+    to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    from: "0x8C8D7C46219D9205f056f28Fee5950aD564d7465",
+    value: ethers.parseEther("0.01"),
+    data: "0x",
+    chain: Chain.Ethereum as const,
+  };
+
+  const fastFee = await ethToolbox.estimateTransactionFee({
+    ...transaction,
+    feeOption: FeeOption.Fast,
+  });
+
+  const averageFee = await ethToolbox.estimateTransactionFee({
+    ...transaction,
+    feeOption: FeeOption.Average,
+  });
+
+  return {
+    fast: fastFee.toString(),
+    average: averageFee.toString(),
+  };
+}
+```
+
+## UTXO Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import { Chain, getUtxoToolbox } from "@swapkit/sdk";
+
+async function setupBitcoinToolbox() {
+  const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+  return btcToolbox;
+}
+```
+
+### Key Generation and Address Management
+
+```ts twoslash
+import { Chain, getUtxoToolbox } from "@swapkit/sdk";
+
+async function bitcoinKeysAndAddresses() {
+  const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+
+  const keys = await btcToolbox.createKeysForPath({
+    phrase: "your twelve word mnemonic phrase here ...",
+    derivationPath: "m/84'/0'/0'/0/0",
+  });
+
+  const address = btcToolbox.getAddressFromKeys(keys);
+
+  const isValid = btcToolbox.validateAddress(
+    "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"
+  );
+
+  return { address, isValid };
+}
+```
+
+### Building and Signing Transactions
+
+```ts twoslash
+import { AssetValue, Chain, FeeOption, getUtxoToolbox } from "@swapkit/sdk";
+
+async function createBitcoinTransaction() {
+  const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+
+  const keys = await btcToolbox.createKeysForPath({
+    phrase: "your twelve word mnemonic phrase here ...",
+    derivationPath: "m/84'/0'/0'/0/0",
+  });
+
+  const fromAddress = btcToolbox.getAddressFromKeys(keys);
+
+  async function signTransaction({
+    builder,
+    utxos,
+  }: {
+    builder: any;
+    utxos: any[];
+  }) {
+    utxos.forEach((utxo, index) => {
+      builder.sign(index, keys);
+    });
+    return builder.build();
+  }
+
+  const feeRate = (await btcToolbox.getFeeRates()).average;
+
+  const { psbt: builder, utxos } = await btcToolbox.buildTx({
+    recipient: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+    feeRate,
+    assetValue: AssetValue.from({ chain: Chain.Bitcoin, value: "0.0001" }),
+    sender: fromAddress,
+    memo: "Test transaction",
+  });
+
+  const signedTx = await signTransaction({ builder, utxos });
+
+  const txHex = signedTx.toHex();
+
+  return {
+    txHex,
+  };
+}
+```
+
+### Balance and Fee Management
+
+```ts twoslash
+import { Chain, getUtxoToolbox } from "@swapkit/sdk";
+
+async function getUtxoData() {
+  const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+
+  const address = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
+  const balance = await btcToolbox.getBalance(address);
+
+  const feeRates = await btcToolbox.getFeeRates();
+
+  return { balance, feeRates };
+}
+```
+
+### Zcash Specific Operations
+
+Zcash requires special handling due to its unique address format and transparent-only support:
+
+```ts twoslash
+import { AssetValue, Chain, FeeOption, getUtxoToolbox } from "@swapkit/sdk";
+
+async function zcashOperations() {
+  const zcashToolbox = await getUtxoToolbox(Chain.Zcash, {
+    phrase:
+      "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+  });
+
+  const address = await zcashToolbox.getAddress();
+  console.log("Zcash address:", address);
+
+  const isValid = zcashToolbox.validateAddress(
+    "t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F"
+  );
+  console.log("Address valid:", isValid);
+
+  const shieldedValid = zcashToolbox.validateAddress("zs1z7rejlpsa98s2...");
+  console.log("Shielded valid:", shieldedValid);
+
+  const txHash = await zcashToolbox.transfer({
+    recipient: "t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F",
+    assetValue: AssetValue.from({ chain: Chain.Zcash, value: "0.001" }),
+    feeOptionKey: FeeOption.Fast,
+    memo: "Payment memo",
+  });
+
+  const keys = await zcashToolbox.createKeysForPath({
+    phrase:
+      "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    derivationPath: "m/44'/133'/0'/0/0",
+  });
+
+  return { address, isValid, txHash, keys };
+}
+```
+
+## Cosmos Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import { Chain, getCosmosToolbox } from "@swapkit/sdk";
+
+function initCosmosToolbox() {
+  const cosmosToolbox = await getCosmosToolbox(Chain.Cosmos);
+
+  const thorchainToolbox = await getCosmosToolbox(Chain.THORChain);
+
+  return { cosmosToolbox, thorchainToolbox };
+}
+```
+
+### Wallet Creation, Signing and Transfers
+
+```ts twoslash
+import {
+  AssetValue,
+  Chain,
+  FeeOption,
+  getCosmosToolbox,
+  TransferParams,
+} from "@swapkit/sdk";
+
+async function createThorchainWallet() {
+  const toolbox = await getCosmosToolbox(Chain.THORChain);
+  const phrase = "your twelve word mnemonic phrase here";
+  const signer = await toolbox.getSigner(phrase);
+  const address = await toolbox.getAddressFromMnemonic(phrase);
+
+  return {
+    ...toolbox,
+    address,
+    transfer: (params: TransferParams) =>
+      toolbox.transfer({ ...params, from: address, signer }),
+    signMessage: async (message: string) => {
+      const privateKey = await toolbox.createPrivateKeyFromPhrase(phrase);
+      return toolbox.signWithPrivateKey({ privateKey, message });
+    },
+  };
+}
+
+const wallet = await createThorchainWallet();
+
+const tx = await wallet.transfer({
+  recipient: "cosmos1abcd1234abcd1234abcd1234abcd1234abcd12",
+  assetValue: AssetValue.from({ chain: Chain.THORChain, value: "0.1" }),
+  from: wallet.address,
+  feeOptionKey: FeeOption.Average,
+});
+
+const signedMessage = await wallet.signMessage("Hello, world!");
+```
+
+### Balances and Account Information
+
+```ts twoslash
+import { Chain, getCosmosToolbox } from "@swapkit/sdk";
+
+async function cosmosBalances() {
+  const cosmosToolbox = await getCosmosToolbox(Chain.Cosmos);
+
+  const address = "cosmos1abcd1234abcd1234abcd1234abcd1234abcd12";
+  const balances = await cosmosToolbox.getBalance(address);
+
+  const accountInfo = await cosmosToolbox.getAccount(address);
+
+  return { balances, accountInfo };
+}
+```
+
+## Solana Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import { getSolanaToolbox } from "@swapkit/sdk";
+
+function initSolanaToolbox() {
+  const solanaToolbox = await getSolanaToolbox();
+  return solanaToolbox;
+}
+```
+
+### Key Management and Addresses
+
+```ts twoslash
+import { getSolanaToolbox } from "@swapkit/sdk";
+
+async function solanaKeysAndAddresses() {
+  const solanaToolbox = await getSolanaToolbox();
+
+  const keypair = await solanaToolbox.createKeysForPath({
+    phrase: "your twelve word mnemonic phrase here",
+    derivationPath: "m/44'/501'/0'/0'",
+  });
+
+  const address = solanaToolbox.getAddressFromKeys(keypair);
+
+  return { address, keypair };
+}
+```
+
+### Transactions and Transfers
+
+```ts twoslash
+import { AssetValue, Chain, getSolanaToolbox } from "@swapkit/sdk";
+
+async function solanaTransfer() {
+  const solanaToolbox = await getSolanaToolbox();
+
+  const keypair = await solanaToolbox.createKeysForPath({
+    phrase: "your twelve word mnemonic phrase here",
+    derivationPath: "m/44'/501'/0'/0'",
+  });
+
+  const amount = AssetValue.from({
+    chain: Chain.Solana,
+    symbol: "SOL",
+    value: "0.01",
+  });
+
+  try {
+    const txHash = await solanaToolbox.transfer({
+      assetValue: amount,
+      recipient: "ASfS6nSsF1JW76EBKsHuAj1ypBGZz6uhLSJ5QBUcCJmr",
+      fromKeypair: keypair,
+      memo: "Transfer from SwapKit",
+    });
+
+    return txHash;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Substrate Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import {
+  Chain,
+  createKeyring,
+  Network,
+  getSubstrateToolbox,
+} from "@swapkit/sdk";
+
+async function initSubstrateToolbox() {
+  const signer = await createKeyring(
+    "your twelve word mnemonic phrase here",
+    Network[Chain.Polkadot].prefix
+  );
+
+  const polkadotToolbox = await getSubstrateToolbox(Chain.Polkadot, { signer });
+
+  return { polkadotToolbox, signer };
+}
+```
+
+### Transactions and Transfers
+
+```ts twoslash
+import {
+  AssetValue,
+  Chain,
+  createKeyring,
+  Network,
+  getSubstrateToolbox,
+} from "@swapkit/sdk";
+
+async function substrateTransfer() {
+  const signer = await createKeyring(
+    "your twelve word mnemonic phrase here",
+    Network[Chain.Polkadot].prefix
+  );
+
+  const polkadotToolbox = await getSubstrateToolbox(Chain.Polkadot, { signer });
+
+  const amount = AssetValue.from({
+    chain: Chain.Polkadot,
+    symbol: "DOT",
+    value: "0.1",
+  });
+
+  const recipient = "15oF4uVJwmo4TdGW7VfQxNLavjCXviqxT9S1MgbjMNHr6Sp5";
+
+  try {
+    const txHash = await polkadotToolbox.transfer({
+      assetValue: amount,
+      recipient,
+      from: signer.address,
+    });
+
+    return txHash;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Ripple Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import { Chain, getRippleToolbox } from "@swapkit/sdk";
+
+const xrpToolbox = await getRippleToolbox({
+  phrase: "your twelve word secret phrase here",
+});
+
+const xrpReadOnlyToolbox = await getRippleToolbox();
+```
+
+### Sending XRP Transactions
+
+```ts twoslash
+import { Chain, AssetValue, FeeOption, getRippleToolbox } from "@swapkit/sdk";
+
+async function sendXRP() {
+  const xrpToolbox = await getRippleToolbox({
+    phrase: "your twelve word secret phrase here",
+  });
+
+  const address = await xrpToolbox.getAddress();
+
+  const txHash = await xrpToolbox.transfer({
+    assetValue: AssetValue.from({ chain: Chain.Ripple, value: "10" }),
+    recipient: "rBaaxNpAKxELKXkJpSCCJQTkQMTYrcPQPv",
+    memo: "123456",
+    feeOptionKey: FeeOption.Fast,
+  });
+
+  return txHash;
+}
+```
+
+### Balance and Validation
+
+```ts twoslash
+import { Chain, getRippleToolbox, rippleValidateAddress } from "@swapkit/sdk";
+
+async function getRippleData() {
+  const xrpToolbox = await getRippleToolbox();
+
+  const address = "rBaaxNpAKxELKXkJpSCCJQTkQMTYrcPQPv";
+  const balance = await xrpToolbox.getBalance(address);
+
+  const isValid = rippleValidateAddress(address);
+
+  return { balance, isValid };
+}
+```
+
+## NEAR Toolbox
+
+### Importing and Initializing
+
+```ts twoslash
+import { getNearToolbox } from "@swapkit/sdk";
+
+const nearToolbox = await getNearToolbox({
+  phrase: "your twelve word mnemonic phrase here",
+
+  derivationPath: [44, 397, 0, 0, 0],
+});
+
+const nearWithAccount = await getNearToolbox({
+  signer: nearSigner,
+  accountId: "alice.near",
+});
+```
+
+### Transfers and Balances
+
+```ts twoslash
+import { AssetValue, Chain, FeeOption, getNearToolbox } from "@swapkit/sdk";
+
+async function nearOperations() {
+  const nearToolbox = await getNearToolbox({
+    phrase: "your twelve word mnemonic phrase here",
+  });
+
+  const accountId = nearToolbox.getAddress();
+
+  const txHash = await nearToolbox.transfer({
+    recipient: "receiver.near",
+    assetValue: AssetValue.from({ chain: Chain.Near, value: "1.5" }),
+    memo: "Payment",
+  });
+
+  const balance = await nearToolbox.getBalance(accountId);
+
+  return { txHash, balance };
+}
+```
+
+### Contract Interactions
+
+```ts twoslash
+import { getNearToolbox } from "@swapkit/sdk";
+
+async function nearContracts() {
+  const nearToolbox = await getNearToolbox({
+    phrase: "your twelve word mnemonic phrase here",
+  });
+
+  const result = await nearToolbox.viewFunction("contract.near", "get_value", {
+    key: "myKey",
+  });
+
+  const txHash = await nearToolbox.callFunction({
+    contractId: "contract.near",
+    methodName: "set_value",
+    args: { key: "myKey", value: "myValue" },
+    attachedDeposit: "1000000000000000000000000",
+  });
+
+  return { result, txHash };
+}
+```
+
+## Combining Multiple Toolboxes
+
+For complex operations involving multiple chains, you can use multiple toolboxes together:
+
+```ts twoslash
+
+import { AssetValue, Chain, getUtxoToolbox, getEvmToolbox } from "@swapkit/sdk";
+import { ethers } from "ethers";
+
+async function crossChainOperation() {
+
+  const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+
+
+  const zcashToolbox = await getUtxoToolbox(Chain.Zcash);
+
+
+  const provider = new ethers.JsonRpcProvider("https:
+  const signer = new ethers.Wallet("your-eth-private-key", provider);
+  const ethToolbox = await getEvmToolbox(Chain.Ethereum, { provider, signer });
+
+
+  const btcAddress = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
+  const btcBalance = await btcToolbox.getBalance(btcAddress);
+
+
+  const zcashAddress = "t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F";
+  const zcashBalance = await zcashToolbox.getBalance(zcashAddress);
+
+
+  const ethAddress = signer.address;
+  const ethBalance = await ethToolbox.getBalance(ethAddress);
+
+  return { btcBalance, zcashBalance, ethBalance };
+}
+```

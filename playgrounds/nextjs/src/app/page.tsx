@@ -1,101 +1,45 @@
 "use client";
-import type { AssetValue, Chain } from "@swapkit/helpers";
-import { Check } from "lucide-react";
-import { useMemo } from "react";
-import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { useSwapKit } from "~/lib/swapKit";
-import { cn } from "~/lib/utils";
 
-export default function Swap() {
-  const { balances } = useSwapKit();
+import { SwapKitWidget } from "@swapkit/ui/react";
 
-  const { chains, balanceGroupedByChain } = useMemo(() => {
-    const balanceGroupedByChain = balances.reduce(
-      (acc, assetValue) => {
-        if (!acc[assetValue.chain]) {
-          acc[assetValue.chain] = [];
-        }
+import { useForm } from "react-hook-form";
+import { AppSidebar } from "~/components/containers/AppSidebar";
+import { WidgetConfigurator, type WidgetConfiguratorFormValues } from "~/components/WidgetConfigurator";
 
-        if (assetValue.isGasAsset || assetValue.getValue("number") > 0) {
-          acc[assetValue.chain].push(assetValue);
-        }
+export default function SwapPage() {
+  const { watch, control } = useForm<WidgetConfiguratorFormValues>({
+    defaultValues: { apiKey: "16621042-80db-41ed-83be-3f0349e0d703", apiUrl: "https://dev-api.swapkit.dev" },
+  });
 
-        return acc;
-      },
-      {} as Record<Chain, AssetValue[]>,
-    );
-
-    return {
-      chains: Object.keys(balanceGroupedByChain) as Chain[],
-      balanceGroupedByChain,
-    };
-  }, [balances]);
+  const [apiKey, apiUrl] = watch(["apiKey", "apiUrl"]);
 
   return (
-    <Card className={cn("w-[600px]")}>
-      <CardHeader>
-        <CardTitle>Swap</CardTitle>
-      </CardHeader>
+    <div className="grid w-full grid-cols-3 gap-4">
+      <AppSidebar>
+        <WidgetConfigurator control={control} />
+      </AppSidebar>
 
-      <CardContent className="grid gap-4">
-        <div className="flex items-center space-x-4 rounded-md border p-4">
-          <Select>
-            <SelectTrigger className="flex flex-1">
-              <SelectValue placeholder="Input Asset" />
-            </SelectTrigger>
-            <SelectContent>
-              {chains.map((chain) =>
-                balanceGroupedByChain[chain]?.length ? (
-                  <SelectGroup key={chain}>
-                    <SelectLabel>{chain}</SelectLabel>
-                    {balanceGroupedByChain[chain].map((assetValue) => (
-                      <SelectItem key={assetValue.toString()} value={assetValue.toString()}>
-                        {assetValue.getValue("number")} {assetValue.symbol}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ) : null,
-              )}
-            </SelectContent>
-          </Select>
-
-          <Select>
-            <SelectTrigger className="flex flex-1">
-              <SelectValue placeholder="Output Asset" />
-            </SelectTrigger>
-            <SelectContent>
-              {chains.map((chain) =>
-                balanceGroupedByChain[chain]?.length ? (
-                  <SelectGroup key={chain}>
-                    <SelectLabel>{chain}</SelectLabel>
-                    {balanceGroupedByChain[chain].map((assetValue) => (
-                      <SelectItem key={assetValue.toString()} value={assetValue.toString()}>
-                        {assetValue.getValue("number")} {assetValue.symbol}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ) : null,
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-
-      <CardFooter>
-        <Button className="w-full">
-          <Check className="mr-2 h-4 w-4" /> Mark all as read
-        </Button>
-      </CardFooter>
-    </Card>
+      <div className="col-span-2 flex w-full max-w-xl items-center justify-center">
+        <SwapKitWidget
+          config={{
+            apiKeys: {
+              keepKey: typeof window !== "undefined" ? localStorage.getItem("keepkeyApiKey") || "1234" : "1234",
+              swapKit: apiKey,
+              walletConnectProjectId: "",
+            },
+            envs: { devApiUrl: apiUrl, isDev: true },
+            integrations: {
+              keepKey: {
+                basePath: "http://localhost:1646/spec/swagger.json",
+                imageUrl:
+                  "https://raw.githubusercontent.com/swapkit/SwapKit/refs/heads/develop/docs/src/assets/logo-black.png",
+                name: "SwapKit",
+                url: "http://localhost:1646",
+              },
+            },
+          }}
+        />
+      </div>
+    </div>
   );
 }

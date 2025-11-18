@@ -1,20 +1,20 @@
-import type { AssetValue, Chain, CryptoChain } from "@swapkit/core";
+import { type AssetValue, getExplorerTxUrl } from "@swapkit/core";
 import { useCallback, useState } from "react";
 import type { SwapKitClient } from "../swapKitClient";
 
-export default function Send({
-  inputAsset,
-  skClient,
-}: {
-  skClient?: SwapKitClient;
-  inputAsset?: AssetValue;
-}) {
+export default function Send({ inputAsset, skClient }: { skClient?: SwapKitClient; inputAsset?: AssetValue }) {
   const [inputAssetValue, setInput] = useState(inputAsset?.mul(0));
+  const [inputString, setInputString] = useState("");
   const [recipient, setRecipient] = useState("");
 
   const handleInputChange = useCallback(
     (value: string) => {
-      setInput(inputAssetValue ? inputAssetValue.mul(0).add(value) : inputAsset?.mul(0).add(value));
+      if (!Number(value)) {
+        setInputString(value);
+        return;
+      }
+      setInputString(value);
+      setInput(inputAssetValue ? inputAssetValue.set(value) : inputAsset?.set(value));
     },
     [inputAssetValue, inputAsset],
   );
@@ -22,57 +22,52 @@ export default function Send({
   const handleSend = useCallback(async () => {
     if (!(inputAsset && inputAssetValue?.gt(0) && skClient)) return;
 
-    const from = skClient.getAddress(inputAsset.chain);
-    const txHash = await skClient
-      .getWallet(inputAssetValue.chain as Exclude<CryptoChain, Chain.Radix>)
-      .transfer({
-        from,
-        assetValue: inputAssetValue,
-        memo: "",
-        recipient,
-      });
+    const sender = skClient.getAddress(inputAsset.chain);
+    const txHash = await skClient.transfer({ assetValue: inputAssetValue, memo: "", recipient, sender });
 
-    window.open(
-      `${skClient.getExplorerTxUrl({ chain: inputAssetValue.chain, txHash: txHash as string })}`,
-      "_blank",
-    );
+    window.open(`${getExplorerTxUrl({ chain: inputAssetValue.chain, txHash: txHash as string })}`, "_blank");
   }, [inputAsset, inputAssetValue, skClient, recipient]);
 
   return (
-    <div>
-      <h4>Send</h4>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ color: "#999", fontSize: 12 }}>
+        <span style={{ fontWeight: 600 }}>Input Asset:</span> {inputAsset?.toSignificant(6)} {inputAsset?.ticker}
+      </div>
 
-      <div style={{ display: "flex", flex: 1, flexDirection: "column" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div>
-          <div>
-            <span>Input Asset: </span>
-            {inputAsset?.toSignificant(6)} {inputAsset?.ticker}
-          </div>
+          <label style={{ color: "#666", display: "block", fontSize: 11, marginBottom: 4 }}>Input Amount:</label>
+          <input
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="0.0"
+            style={{ fontSize: 13, width: "100%" }}
+            value={Number(inputString) ? inputAssetValue?.getValue("string") : inputString}
+          />
         </div>
 
         <div>
-          <div>
-            <span>Input Amount:</span>
-            <input
-              onChange={(e) => handleInputChange(e.target.value)}
-              placeholder="0.0"
-              value={inputAssetValue?.toSignificant(6)}
-            />
-          </div>
-
-          <div>
-            <span>Recipient:</span>
-            <input
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder="address"
-              value={recipient}
-            />
-          </div>
-
-          <button disabled={!inputAsset} onClick={handleSend} type="button">
-            Send
-          </button>
+          <label style={{ color: "#666", display: "block", fontSize: 11, marginBottom: 4 }}>Recipient:</label>
+          <input
+            onChange={(e) => setRecipient(e.target.value)}
+            placeholder="address"
+            style={{ fontSize: 13, width: "100%" }}
+            value={recipient}
+          />
         </div>
+
+        <button
+          disabled={!inputAsset}
+          onClick={handleSend}
+          style={{
+            backgroundColor: "#2563eb",
+            borderColor: "#2563eb",
+            color: "#fff",
+            fontSize: 12,
+            padding: "10px 16px",
+          }}
+          type="button">
+          Send
+        </button>
       </div>
     </div>
   );

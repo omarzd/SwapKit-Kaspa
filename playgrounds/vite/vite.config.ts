@@ -1,5 +1,6 @@
-import { resolve } from "path";
+import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
@@ -7,14 +8,25 @@ import wasm from "vite-plugin-wasm";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  server: { port: 3000 },
   base: "/SwapKit",
 
+  build: {
+    commonjsOptions: { transformMixedEsModules: true },
+    reportCompressedSize: true,
+    rollupOptions: { plugins: [nodePolyfills()] },
+    sourcemap: true,
+    target: "es2022",
+  },
+
   // NOTE: Have to be added to fix: Uncaught ReferenceError: process & global is not defined
-  define: {
-    "process.env": {},
-    "process.browser": true,
-    global: "globalThis",
+  define: { global: "globalThis", "process.browser": true, "process.env": {} },
+
+  esbuild: { logOverride: { "this-is-undefined-in-esm": "silent" }, target: "es2022" },
+  optimizeDeps: {
+    esbuildOptions: {
+      // NOTE: Have to be added to fix: Uncaught ReferenceError: global is not defined
+      define: { global: "globalThis" },
+    },
   },
   plugins: [
     nodePolyfills({
@@ -28,77 +40,32 @@ export default defineConfig({
     react(),
     wasm(),
     topLevelAwait(),
-  ],
+  ].concat(
+    process.env.VISUALISE === "true"
+      ? [visualizer({ filename: "dist/stats.html", gzipSize: true, open: true, sourcemap: true })]
+      : [],
+  ),
   resolve: {
     alias: {
-      "@swapkit/api": resolve("../../packages/swapkit/api/src"),
-      "@swapkit/core": resolve("../../packages/swapkit/core/src"),
-      "@swapkit/contracts": resolve("../../packages/swapkit/contracts/src"),
-      "@swapkit/helpers": resolve("../../packages/swapkit/helpers/src"),
-      "@swapkit/sdk": resolve("../../packages/swapkit/sdk/src"),
-      "@swapkit/types": resolve("../../packages/swapkit/types/src"),
-      "@swapkit/wallets": resolve("../../packages/swapkit/wallets/src"),
-
-      "@swapkit/plugin-chainflip": resolve("../../packages/plugins/chainflip/src"),
-      "@swapkit/plugin-evm": resolve("../../packages/plugins/evm/src"),
-      "@swapkit/plugin-kado": resolve("../../packages/plugins/kado/src"),
-      "@swapkit/plugin-radix": resolve("../../packages/plugins/radix/src"),
-      "@swapkit/plugin-thorchain": resolve("../../packages/plugins/thorchain/src"),
-
-      "@swapkit/toolbox-cosmos": resolve("../../packages/toolboxes/cosmos/src"),
-      "@swapkit/toolbox-evm": resolve("../../packages/toolboxes/evm/src"),
-      "@swapkit/toolbox-radix": resolve("../../packages/toolboxes/radix/src"),
-      "@swapkit/toolbox-solana": resolve("../../packages/toolboxes/solana/src"),
-      "@swapkit/toolbox-substrate": resolve("../../packages/toolboxes/substrate/src"),
-      "@swapkit/toolbox-utxo": resolve("../../packages/toolboxes/utxo/src"),
-
-      "@swapkit/wallet-bitget": resolve("../../packages/wallets/bitget/src"),
-      "@swapkit/wallet-coinbase": resolve("../../packages/wallets/coinbase/src"),
-      "@swapkit/wallet-evm-extensions": resolve("../../packages/wallets/evm-extensions/src"),
-      "@swapkit/wallet-exodus": resolve("../../packages/wallets/exodus/src"),
-      "@swapkit/wallet-keepkey": resolve("../../packages/wallets/keepkey/src"),
-      "@swapkit/wallet-keepkey-bex": resolve("../../packages/wallets/keepkey-bex/src"),
-      "@swapkit/wallet-keplr": resolve("../../packages/wallets/keplr/src"),
-      "@swapkit/wallet-keystore": resolve("../../packages/wallets/keystore/src"),
-      "@swapkit/wallet-ledger": resolve("../../packages/wallets/ledger/src"),
-      "@swapkit/wallet-okx": resolve("../../packages/wallets/okx/src"),
-      "@swapkit/wallet-onekey": resolve("../../packages/wallets/onekey/src"),
-      "@swapkit/wallet-phantom": resolve("../../packages/wallets/phantom/src"),
-      "@swapkit/wallet-radix": resolve("../../packages/wallets/radix/src"),
-      "@swapkit/wallet-talisman": resolve("../../packages/wallets/talisman/src"),
-      "@swapkit/wallet-trezor": resolve("../../packages/wallets/trezor/src"),
-      "@swapkit/wallet-wc": resolve("../../packages/wallets/wc/src"),
-      "@swapkit/wallet-ctrl": resolve("../../packages/wallets/ctrl/src"),
+      "@swapkit/core": resolve("../../packages/core/src"),
+      "@swapkit/helpers": resolve("../../packages/helpers/src"),
+      "@swapkit/plugins": resolve("../../packages/plugins/src"),
+      "@swapkit/sdk": resolve("../../packages/sdk/src"),
+      "@swapkit/toolboxes": resolve("../../packages/toolboxes/src"),
+      "@swapkit/wallet-core": resolve("../../packages/wallet-core/src"),
+      "@swapkit/wallet-hardware": resolve("../../packages/wallet-hardware/src"),
+      "@swapkit/wallet-hardware/ledger": resolve("../../packages/wallet-hardware/src/ledger"),
+      "@swapkit/wallets": resolve("../../packages/wallets/src"),
 
       crypto: "crypto-browserify",
-      stream: "stream-browserify",
       http: "stream-http",
       https: "https-browserify",
       os: "os-browserify/browser",
       path: "path-browserify",
+      react: resolve("../../node_modules/react"),
+      "react-dom": resolve("../../node_modules/react-dom"),
+      stream: "stream-browserify",
     },
   },
-
-  build: {
-    target: "es2022",
-    reportCompressedSize: true,
-    sourcemap: true,
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-    rollupOptions: {
-      plugins: [nodePolyfills()],
-    },
-  },
-
-  esbuild: {
-    target: "es2022",
-    logOverride: { "this-is-undefined-in-esm": "silent" },
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      // NOTE: Have to be added to fix: Uncaught ReferenceError: global is not defined
-      define: { global: "globalThis" },
-    },
-  },
+  server: { port: 3000 },
 });

@@ -1,0 +1,292 @@
+---
+title: Signing Transactions
+description: How to sign transactions and messages with SwapKit
+---
+
+SwapKit provides ways to sign transactions and messages across different blockchains. This guide shows how to use these signing capabilities with both granular and all-in-one package approaches.
+
+## Two Approaches for Using SwapKit
+
+You can use SwapKit in two ways:
+
+1. **Granular approach** - Import only what you need from individual packages (recommended for frontend):
+
+   ```ts
+   import { SwapKit, evmWallet } from "@swapkit/sdk";
+   ```
+
+2. **All-in-one approach** - Import everything from the SDK (better for backend/Node.js):
+   ```ts
+   import { createSwapKit } from "@swapkit/sdk";
+   ```
+
+## Signing Messages
+
+Signing messages is useful for authentication, proving ownership of an address, or interacting with decentralized applications.
+
+### Granular Approach
+
+```ts twoslash
+import { Chain, SwapKit, evmWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...evmWallet },
+});
+
+async function signMessageExample() {
+  await swapKit.connectEVMWallet([Chain.Ethereum]);
+
+  const message = "I am proving ownership of this wallet address";
+
+  try {
+    const signature = await swapKit.signMessage({
+      chain: Chain.Ethereum,
+      message,
+    });
+
+    return signature;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+### All-in-one Approach
+
+```ts twoslash
+import { Chain, createSwapKit } from "@swapkit/sdk";
+
+const swapKit = createSwapKit();
+
+async function signMessageExample() {
+  await swapKit.connectKeystore([Chain.Ethereum], "your secret phrase here");
+
+  const message = "I am proving ownership of this wallet address";
+
+  try {
+    const signature = await swapKit.signMessage({
+      chain: Chain.Ethereum,
+      message,
+    });
+
+    return signature;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Signing with Different Chains
+
+Different blockchains have different message signing formats:
+
+```ts twoslash
+import { Chain, SwapKit, evmWallet, keystoreWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...evmWallet, ...keystoreWallet },
+});
+
+async function setupWallets() {
+  await swapKit.connectKeystore(
+    [Chain.Bitcoin, Chain.Cosmos, Chain.THORChain],
+    "your secret phrase here"
+  );
+
+  await swapKit.connectEVMWallet([Chain.Ethereum]);
+}
+
+async function signCosmosMessage() {
+  const message = "Sign this message to verify your THORChain address";
+
+  try {
+    const signature = await swapKit.signMessage({
+      chain: Chain.THORChain,
+      message,
+    });
+
+    return signature;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Verifying Signed Messages
+
+After signing a message, you or others may want to verify the signature:
+
+```ts twoslash
+import { Chain, SwapKit, keystoreWallet } from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...keystoreWallet },
+});
+
+async function verifySignature() {
+  const message = "I am proving ownership of this wallet address";
+
+  const address = "thor1fkm5w5uum0j5h9g35vwqtf7angh9uvrm9mszyx";
+
+  const signature =
+    "ac7bfd5b5c9f44788fb533b7f08b213a3e3856e75ecdb19c5e9138ba29c4c1681e82b7de139e0b92cd9442297ec7fdd2c14e7034a3aa417ff9756e9b591d93201";
+
+  try {
+    const isValid = await swapKit.verifyMessage({
+      chain: Chain.THORChain,
+      message,
+      address,
+      signature,
+    });
+
+    return isValid;
+  } catch (error) {
+    return false;
+  }
+}
+```
+
+## Signing Transactions
+
+In most cases, SwapKit handles transaction signing internally when using methods like `transfer` or `swap`. However, there are cases where you might want to create and sign a transaction separately.
+
+### Using Toolboxes for Transaction Signing
+
+For more control over the signing process, you can use toolboxes directly:
+
+```ts twoslash
+
+import { Chain, getEvmToolbox, ethers } from "@swapkit/sdk";
+
+
+async function signEthereumTransaction() {
+
+  const provider = new ethers.JsonRpcProvider("https:
+  const signer = new ethers.Wallet("your-eth-private-key", provider);
+
+
+  const ethToolbox = await getEvmToolbox(Chain.Ethereum, {
+    provider,
+    signer,
+  });
+
+
+  const transaction = {
+    to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    value: ethers.parseEther("0.01"),
+    data: "0x",
+    from: signer.address,
+  };
+
+  try {
+
+    const signedTx = await ethToolbox.sendTransaction(transaction);
+
+
+
+
+    return signedTx;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+### Bitcoin Transaction Signing
+
+For UTXO chains like Bitcoin, the process involves creating inputs and outputs:
+
+```ts twoslash
+import { AssetValue, Chain, FeeOption, getUtxoToolbox } from "@swapkit/sdk";
+
+async function signBitcoinTransaction() {
+  const btcToolbox = await getUtxoToolbox(Chain.Bitcoin);
+
+  const keys = await btcToolbox.createKeysForPath({
+    phrase: "your twelve word mnemonic phrase here",
+    derivationPath: "m/84'/0'/0'/0/0",
+  });
+
+  const fromAddress = btcToolbox.getAddressFromKeys(keys);
+
+  const amount = AssetValue.from({
+    chain: Chain.Bitcoin,
+    symbol: "BTC",
+    value: "0.001",
+  });
+
+  const recipient = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
+
+  try {
+    const { psbt: builder, utxos } = await btcToolbox.buildTx({
+      sender: fromAddress,
+      recipient,
+      assetValue: amount,
+      feeRate: 1.2,
+      memo: "Test transaction",
+    });
+
+    utxos.forEach((utxo, index) => builder.sign(index, keys));
+
+    const txHash = await btcToolbox.broadcastTx(builder.toHex());
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Custom Transaction Signing with Hardware Wallets
+
+Hardware wallets like Ledger or Trezor have special requirements for signing:
+
+```ts twoslash
+import {
+  AssetValue,
+  Chain,
+  FeeOption,
+  SwapKit,
+  ledgerWallet,
+} from "@swapkit/sdk";
+
+const swapKit = SwapKit({
+  wallets: { ...ledgerWallet },
+});
+
+async function signWithLedger() {
+  try {
+    await swapKit.connectLedger([Chain.Ethereum]);
+
+    const ledgerWallet = swapKit.getWallet(Chain.Ethereum);
+
+    const txHash = await ledgerWallet.transfer({
+      assetValue: AssetValue.from({ chain: Chain.Ethereum, value: "0.01" }),
+      feeOptionKey: FeeOption.Fast,
+      from: ledgerWallet.address,
+      memo: "Ledger transfer",
+      recipient: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    });
+
+    return txHash;
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Using Low-level Toolbox Signing Methods
+
+For complete control over the signing process, you can use toolbox-specific methods:
+
+```ts twoslash
+import { Chain, getCosmosToolbox } from "@swapkit/sdk";
+
+async function cosmosWallet() {
+  const cosmosToolbox = await getCosmosToolbox(Chain.THORChain);
+
+  const phrase = "your twelve word mnemonic phrase here";
+  const signer = await cosmosToolbox.getSigner(phrase);
+  const address = await cosmosToolbox.getAddressFromMnemonic(phrase);
+
+  return { signer, address };
+}
+```

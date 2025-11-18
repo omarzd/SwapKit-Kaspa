@@ -1,13 +1,11 @@
 "use client";
 
 import { AssetValue, Chain, getMAYANameCost } from "@swapkit/helpers";
+import { useSwapKit } from "@swapkit/ui/react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { useSwapKit } from "~/lib/swapKit";
-// import { useSwapKit } from "~/lib/swapKit";
 
 export default function Send() {
-  // const { swapKit } = useSwapKit();
   const { swapKit, checkIfChainConnected } = useSwapKit();
   const name = "TEST_OF_SWAPKIT";
 
@@ -16,9 +14,7 @@ export default function Send() {
       <Card>
         <CardHeader>
           <CardTitle>Register MAYAName</CardTitle>
-          <CardDescription>
-            Do not approve the tx without changing the name in the code first ;)
-          </CardDescription>
+          <CardDescription>Do not approve the tx without changing the name in the code first ;)</CardDescription>
         </CardHeader>
 
         <CardContent className="mt-3">
@@ -33,17 +29,13 @@ export default function Send() {
                 return;
               }
 
-              swapKit.registerMayaname({
-                name,
-                chain: Chain.Maya,
+              swapKit.mayachain.registerName({
                 address: swapKit.getAddress(Chain.Maya),
-                assetValue: AssetValue.from({
-                  chain: Chain.Maya,
-                  value: getMAYANameCost(1),
-                }),
+                assetValue: AssetValue.from({ chain: Chain.Maya, value: getMAYANameCost(1) }),
+                chain: Chain.Maya,
+                name,
               });
-            }}
-          >
+            }}>
             Register MAYAName "{name}" for 1 year
           </Button>
         </CardContent>

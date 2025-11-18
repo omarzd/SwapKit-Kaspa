@@ -2,36 +2,39 @@
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "0.2.2",
+    "@near-wallet-selector/meteor-wallet": "~10.1.0",
     "@swapkit/sdk": "workspace:*",
-    "@swapkit/tokens": "workspace:*",
+    "@swapkit/ui": "workspace:*",
     "base64-js": "1.5.1",
     "buffer": "6.0.3",
-    "crypto-browserify": "3.12.0",
+    "crypto-browserify": "3.12.1",
     "https-browserify": "1.0.0",
     "os-browserify": "0.3.0",
     "path-browserify": "1.0.1",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
     "stream-browserify": "3.0.0",
     "stream-http": "3.2.0",
-    "url": "0.11.3",
-    "vite": "5.3.3",
-    "vite-plugin-node-polyfills": "0.22.0"
+    "url": "0.11.4",
+    "vite": "7.1.10",
+    "vite-plugin-node-polyfills": "0.24.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "4.3.1",
-    "typescript": "5.5.4",
-    "vite-plugin-top-level-await": "1.4.1",
-    "vite-plugin-wasm": "3.3.0"
+    "@vitejs/plugin-react": "5.1.0",
+    "rollup-plugin-visualizer": "6.0.5",
+    "typescript": "5.9.3",
+    "vite-plugin-top-level-await": "1.6.0",
+    "vite-plugin-wasm": "3.5.0"
   },
   "name": "@internal/playground-vite",
   "private": true,
   "scripts": {
     "build-playground": "NODE_OPTIONS=--max_old_space_size=65536 vite build",
-    "dev": "vite",
-    "lint": "biome check --diagnostic-level=error --write ./src",
-    "type-check": "tsc --noEmit",
-    "preview-playground": "vite preview"
+    "dev": "vite --host",
+    "preview-playground": "vite preview",
+    "serve": "bun build-playground && bun preview-playground",
+    "visualise": "VISUALISE=true bun build-playground"
   },
+  "type": "module",
   "version": "0.0.0"
 }
