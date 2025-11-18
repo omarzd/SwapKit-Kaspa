@@ -34,3 +34,21 @@ export function validateZcashAddress(address: string): boolean {
     return false;
   }
 }
+
+export function validateKaspaAddress(address: string): boolean {
+  try {
+    const kaspaPrefix = "kaspa:";
+    const strippedAddress = address.startsWith(kaspaPrefix)
+      ? address.substring(kaspaPrefix.length)
+      : address;
+
+    if (strippedAddress.length < 61 || strippedAddress.length > 63) {
+      return false;
+    }
+
+    const validChars = /^[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+$/;
+    return validChars.test(strippedAddress);
+  } catch {
+    return false;
+  }
+}

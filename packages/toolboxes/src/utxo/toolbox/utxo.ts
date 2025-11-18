@@ -34,7 +34,7 @@ import {
 } from "../helpers";
 import type { BchECPair, TargetOutput, UTXOBuildTxParams, UTXOTransferParams, UTXOType } from "../types";
 import type { UtxoToolboxParams } from "./params";
-import { bchValidateAddress, validateZcashAddress } from "./validators";
+import { bchValidateAddress, validateKaspaAddress, validateZcashAddress } from "./validators";
 
 export const nonSegwitChains: UTXOChain[] = [Chain.Dash, Chain.Dogecoin, Chain.Zcash, Chain.BitcoinCash];
 
@@ -126,6 +126,10 @@ export async function getUTXOAddressValidator() {
 
     if (chain === Chain.Zcash) {
       return validateZcashAddress(address);
+    }
+
+    if (chain === Chain.Kaspa) {
+      return validateKaspaAddress(address);
     }
 
     try {

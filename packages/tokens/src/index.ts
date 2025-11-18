@@ -5,6 +5,7 @@ type ListOfTokens = Exclude<
   keyof typeof tokenLists,
   | "JupiterList"
   | "CamelotV3List"
+  | "KaspaList"
   | "OneInchList"
   | "OpenOceanV2List"
   | "PancakeswapList"
@@ -19,6 +20,7 @@ export type TokenLists = {
   chainflip: typeof tokenLists.ChainflipList;
   jupiter: typeof tokenLists.JupiterList;
   garden: typeof tokenLists.GardenList;
+  kaspa: typeof tokenLists.KaspaList;
   mayachain: typeof tokenLists.MayaList;
   near: typeof tokenLists.NearList;
   okx: typeof tokenLists.OkxList;
@@ -42,6 +44,7 @@ const defaultLists = [
   "caviar",
   "chainflip",
   "jupiter",
+  "kaspa",
   "mayachain",
   "garden",
   "near",
@@ -78,6 +81,7 @@ async function loadTokenList<T extends TokenListName>(listName: T): Promise<Toke
     .with("chainflip", () => import("./lists/chainflip"))
     .with("garden", () => import("./lists/garden"))
     .with("jupiter", () => import("./lists/jupiter"))
+    .with("kaspa", () => import("./lists/kaspa"))
     .with("mayachain", () => import("./lists/mayachain"))
     .with("near", () => import("./lists/near"))
     .with("okx", () => import("./lists/okx"))

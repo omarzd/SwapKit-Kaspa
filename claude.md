@@ -67,11 +67,11 @@ This would enable users to:
 2. Perform cross-chain swaps involving KAS
 3. Use Kaspa in liquidity pools (if supported by the protocol)
 
-## Current State (~15% Complete)
+## Current State (~25% Complete)
 
 ### What HAS Been Implemented (December 2024 Update)
 
-After merging the latest SwapKit codebase (develop branch) and beginning integration work:
+After merging the latest SwapKit codebase (develop branch) and implementing core functionality:
 
 1. **✅ Chain Definition**: Kaspa added to `Chain` enum as `Kaspa = "KAS"` (`packages/types/src/chains/_enums.ts:23`)
 2. **✅ Chain ID**: Kaspa added to `ChainId` enum as `Kaspa = "kaspa"` (`packages/types/src/chains/_enums.ts:83`)
@@ -83,20 +83,28 @@ After merging the latest SwapKit codebase (develop branch) and beginning integra
    - Network derivation path: [44, 111111, 0, 0, 0]
    - Native currency: KAS
 4. **✅ UTXO Chain Integration**: Kaspa added to `UTXOChains` array and `UTXOChainConfigs`
-5. **✅ Type Safety**: All type definitions compile without errors
+5. **✅ Address Validation**: Kaspa address validator added (`packages/toolboxes/src/utxo/toolbox/validators.ts:38-54`):
+   - Validates bech32m format addresses
+   - Supports both prefixed (kaspa:) and non-prefixed addresses
+   - Integrated into UTXO address validation flow
+6. **✅ Token Definition**: Native KAS token added to token lists (`packages/tokens/src/lists/kaspa.ts`):
+   - Identifier: KAS.KAS
+   - Decimals: 8
+   - Integrated into token loading system
+7. **✅ Type Safety**: All type definitions compile without errors
 
 ### What's NOT Been Implemented
 
-1. **No Kaspa-Specific Toolbox**: The generic UTXO toolbox exists but needs Kaspa-specific implementations:
-   - Address validation (Kaspa uses bech32m with "kaspa:" prefix)
+1. **No Complete Kaspa Toolbox**: While address validation exists, still missing:
+   - Address generation from seed phrases
    - Transaction building (Kaspa's UTXO model differs from Bitcoin due to DAG structure)
    - UTXO selection adapted for parallel blocks
    - Transaction signing with Kaspa's signature format
+   - Key pair generation
 2. **No Wallet Support**: No Kaspa wallet integrations (Kasware, Kaspa desktop wallet, etc.)
-3. **No Token Support**: No KAS token definitions added to token lists
-4. **No Plugin Integration**: No integration with THORChain or Maya Protocol swap plugins
-5. **No API Client**: No Kaspa blockchain API integration for balance queries and UTXO fetching
-6. **No Tests**: No unit or integration tests for Kaspa functionality
+3. **No Plugin Integration**: No integration with THORChain or Maya Protocol swap plugins
+4. **No API Client**: No Kaspa blockchain API integration for balance queries and UTXO fetching
+5. **No Tests**: No unit or integration tests for Kaspa functionality
 
 ### What Would Need to Be Done
 
@@ -111,37 +119,42 @@ To complete the Kaspa integration, the following tasks are required:
 - [x] Configure `RPC_URLS` and `EXPLORER_URLS` for Kaspa
 
 #### 2. Toolbox Implementation
-- [ ] Create `packages/toolboxes/kaspa/` directory
-- [ ] Implement Kaspa address generation and validation
+- [x] Implement Kaspa address validation (bech32m format with optional "kaspa:" prefix)
+- [ ] Implement Kaspa address generation from seed phrases
 - [ ] Implement transaction building for Kaspa's UTXO model
-- [ ] Handle Kaspa's unique DAG structure if needed
+- [ ] Handle Kaspa's unique DAG structure for UTXO selection
 - [ ] Implement balance queries and UTXO management
-- [ ] Add support for Kaspa's native scripting (if applicable)
+- [ ] Implement key pair generation and transaction signing
 
-#### 3. Wallet Integration
+#### 3. Token Support
+- [x] Create Kaspa token list with native KAS token
+- [x] Add to token loading system (kaspa list)
+- [ ] Add support for KRC-20 tokens (if applicable)
+
+#### 4. Wallet Integration
 - [ ] Research which wallets support Kaspa (e.g., Kaspa desktop wallet, Kasware, etc.)
 - [ ] Create wallet integration packages if applicable
 - [ ] Add Kaspa support to existing hardware wallets (Ledger, Trezor) if they support KAS
 
-#### 4. API Integration
+#### 5. API Integration
 - [ ] Identify Kaspa blockchain explorers and APIs
 - [ ] Implement API client for balance queries
 - [ ] Implement transaction broadcasting
 - [ ] Add UTXO fetching functionality
 
-#### 5. Plugin Integration
+#### 6. Plugin Integration
 - [ ] Determine if THORChain or Maya Protocol support Kaspa
 - [ ] If supported, add Kaspa to the appropriate plugin's supported chains
 - [ ] Implement swap quote logic for KAS pairs
 - [ ] Add Kaspa-specific memo format handling
 
-#### 6. Testing
+#### 7. Testing
 - [ ] Add unit tests for Kaspa toolbox functions
 - [ ] Add integration tests for wallet operations
 - [ ] Test cross-chain swaps involving Kaspa
 - [ ] Create playground examples
 
-#### 7. Documentation
+#### 8. Documentation
 - [ ] Document Kaspa integration in SwapKit docs
 - [ ] Provide code examples for developers
 - [ ] Update changelog and version packages
