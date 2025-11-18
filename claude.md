@@ -67,30 +67,48 @@ This would enable users to:
 2. Perform cross-chain swaps involving KAS
 3. Use Kaspa in liquidity pools (if supported by the protocol)
 
-## Current State (10% Complete)
+## Current State (~15% Complete)
+
+### What HAS Been Implemented (December 2024 Update)
+
+After merging the latest SwapKit codebase (develop branch) and beginning integration work:
+
+1. **✅ Chain Definition**: Kaspa added to `Chain` enum as `Kaspa = "KAS"` (`packages/types/src/chains/_enums.ts:23`)
+2. **✅ Chain ID**: Kaspa added to `ChainId` enum as `Kaspa = "kaspa"` (`packages/types/src/chains/_enums.ts:83`)
+3. **✅ Chain Configuration**: Full Kaspa chain config created in `packages/types/src/chains/utxo.ts:71-82`:
+   - Base decimal: 8
+   - Block time: 1 second
+   - Explorer URL: https://explorer.kaspa.org
+   - RPC URLs: https://api.kaspa.org (primary), https://kaspa-rpc.publicnode.com (fallback)
+   - Network derivation path: [44, 111111, 0, 0, 0]
+   - Native currency: KAS
+4. **✅ UTXO Chain Integration**: Kaspa added to `UTXOChains` array and `UTXOChainConfigs`
+5. **✅ Type Safety**: All type definitions compile without errors
 
 ### What's NOT Been Implemented
 
-Based on exploration of the codebase, Kaspa integration is essentially non-existent:
-
-1. **No Chain Definition**: Kaspa is not in the `Chain` enum (`packages/swapkit/helpers/src/types/chains.ts:1`)
-2. **No Toolbox**: No `@swapkit/toolbox-kaspa` package exists
-3. **No Wallet Support**: No Kaspa wallet integrations
-4. **No RPC/API Configuration**: No RPC URLs, explorer URLs, or API endpoints configured
-5. **No Token Support**: No KAS token definitions (only a "KaspaINU" token on Arbitrum was found)
-6. **No Plugin Integration**: No integration with THORChain or Maya Protocol swap plugins
+1. **No Kaspa-Specific Toolbox**: The generic UTXO toolbox exists but needs Kaspa-specific implementations:
+   - Address validation (Kaspa uses bech32m with "kaspa:" prefix)
+   - Transaction building (Kaspa's UTXO model differs from Bitcoin due to DAG structure)
+   - UTXO selection adapted for parallel blocks
+   - Transaction signing with Kaspa's signature format
+2. **No Wallet Support**: No Kaspa wallet integrations (Kasware, Kaspa desktop wallet, etc.)
+3. **No Token Support**: No KAS token definitions added to token lists
+4. **No Plugin Integration**: No integration with THORChain or Maya Protocol swap plugins
+5. **No API Client**: No Kaspa blockchain API integration for balance queries and UTXO fetching
+6. **No Tests**: No unit or integration tests for Kaspa functionality
 
 ### What Would Need to Be Done
 
 To complete the Kaspa integration, the following tasks are required:
 
 #### 1. Core Chain Definition
-- [ ] Add `Kaspa = "KAS"` to `Chain` enum in `packages/swapkit/helpers/src/types/chains.ts`
-- [ ] Add `Kaspa` to `ChainId` enum
-- [ ] Add Kaspa to `BaseDecimal` record (8 decimals)
-- [ ] Add Kaspa to `BlockTimes` record (~1 second)
-- [ ] Add Kaspa to `UTXOChains` type and array
-- [ ] Configure `RPC_URLS`, `FALLBACK_URLS`, and `EXPLORER_URLS` for Kaspa
+- [x] Add `Kaspa = "KAS"` to `Chain` enum in `packages/types/src/chains/_enums.ts`
+- [x] Add `Kaspa` to `ChainId` enum
+- [x] Add Kaspa to `BaseDecimal` record (8 decimals)
+- [x] Add Kaspa to `BlockTimes` record (1 second)
+- [x] Add Kaspa to `UTXOChains` type and array
+- [x] Configure `RPC_URLS` and `EXPLORER_URLS` for Kaspa
 
 #### 2. Toolbox Implementation
 - [ ] Create `packages/toolboxes/kaspa/` directory

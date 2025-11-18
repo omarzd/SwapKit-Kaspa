@@ -68,6 +68,19 @@ const DASH = createChain({
   type,
 });
 
+const KAS = createChain({
+  baseDecimal: 8,
+  blockTime: 1,
+  chain: Chain.Kaspa,
+  chainId: ChainId.Kaspa,
+  explorerUrl: "https://explorer.kaspa.org",
+  name: "Kaspa",
+  nativeCurrency: "KAS",
+  networkDerivationPath: [44, 111111, 0, 0, 0],
+  rpcUrls: ["https://api.kaspa.org", "https://kaspa-rpc.publicnode.com"],
+  type,
+});
+
 const ZEC = createChain({
   baseDecimal: 8,
   blockTime: 75,
@@ -81,12 +94,13 @@ const ZEC = createChain({
   type,
 });
 
-export const UTXOChainConfigs = [BTC, BCH, LTC, DOGE, DASH, ZEC] as const;
+export const UTXOChainConfigs = [BTC, BCH, LTC, DOGE, DASH, KAS, ZEC] as const;
 export const UTXOChains = [
   Chain.Bitcoin,
   Chain.BitcoinCash,
   Chain.Dash,
   Chain.Dogecoin,
+  Chain.Kaspa,
   Chain.Litecoin,
   Chain.Zcash,
 ] as const;
