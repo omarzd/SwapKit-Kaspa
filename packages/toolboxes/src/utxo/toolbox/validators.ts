@@ -35,19 +35,41 @@ export function validateZcashAddress(address: string): boolean {
   }
 }
 
+/**
+ * Validates a Kaspa address
+ * Kaspa uses bech32 encoding (not bech32m) with network-specific prefixes
+ * Mainnet: kaspa:, Testnet: kaspatest:, Devnet: kaspadev:, Simnet: kaspasim:
+ * Address types: P2PK (v0), P2PK ECDSA (v1), P2SH (v8)
+ * Example: kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j
+ */
 export function validateKaspaAddress(address: string): boolean {
   try {
     const kaspaPrefix = "kaspa:";
-    const strippedAddress = address.startsWith(kaspaPrefix)
-      ? address.substring(kaspaPrefix.length)
-      : address;
+    const testnetPrefix = "kaspatest:";
+    const devnetPrefix = "kaspadev:";
+    const simnetPrefix = "kaspasim:";
+
+    let strippedAddress = address;
+    if (address.startsWith(kaspaPrefix)) {
+      strippedAddress = address.substring(kaspaPrefix.length);
+    } else if (address.startsWith(testnetPrefix)) {
+      strippedAddress = address.substring(testnetPrefix.length);
+    } else if (address.startsWith(devnetPrefix)) {
+      strippedAddress = address.substring(devnetPrefix.length);
+    } else if (address.startsWith(simnetPrefix)) {
+      strippedAddress = address.substring(simnetPrefix.length);
+    }
 
     if (strippedAddress.length < 61 || strippedAddress.length > 63) {
       return false;
     }
 
     const validChars = /^[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+$/;
-    return validChars.test(strippedAddress);
+    if (!validChars.test(strippedAddress)) {
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }
