@@ -60,7 +60,9 @@ export function validateKaspaAddress(address: string): boolean {
       strippedAddress = address.substring(simnetPrefix.length);
     }
 
-    if (strippedAddress.length < 61 || strippedAddress.length > 63) {
+    // Kaspa addresses typically range from 59-63 characters after stripping prefix
+    // This accounts for different address types (P2PK Schnorr, P2PK ECDSA, P2SH)
+    if (strippedAddress.length < 59 || strippedAddress.length > 65) {
       return false;
     }
 

@@ -67,9 +67,9 @@ This would enable users to:
 2. Perform cross-chain swaps involving KAS
 3. Use Kaspa in liquidity pools (if supported by the protocol)
 
-## Current State (~30% Complete)
+## Current State (~45% Complete)
 
-### What HAS Been Implemented (December 2024 Update)
+### What HAS Been Implemented (January 2025 Update)
 
 After merging the latest SwapKit codebase (develop branch) and implementing core functionality with comprehensive testing:
 
@@ -93,26 +93,42 @@ After merging the latest SwapKit codebase (develop branch) and implementing core
    - Identifier: KAS.KAS
    - Decimals: 8
    - Integrated into token loading system
-7. **✅ Type Safety**: All type definitions compile without errors
-8. **✅ Comprehensive Testing**: 32 tests total, all passing
+7. **✅ Key Generation & Address Generation**: Complete Kaspa toolbox implementation (`packages/toolboxes/src/utxo/toolbox/kaspa.ts`):
+   - BIP39 mnemonic to seed conversion using `@scure/bip39`
+   - BIP32 hierarchical deterministic key derivation using `@scure/bip32`
+   - Correct BIP44 derivation path: `m/44'/111111'/0'/0/0`
+   - Schnorr public key generation (x-only, 32 bytes) for P2PK addresses
+   - Bech32 address encoding with Kaspa network prefixes
+   - Deterministic address generation from seed phrases
+   - Private key export in hex format
+   - Address generation from public keys
+   - Integrated into main UTXO toolbox factory
+   - 17 integration tests passing
+8. **✅ Type Safety**: All type definitions compile without errors
+9. **✅ Comprehensive Testing**: 49 tests total, all passing
    - Address validation tests: 18 tests covering valid/invalid addresses, edge cases, cross-chain validation
    - Chain configuration tests: 14 tests verifying all config parameters against official specs
+   - Integration tests: 17 tests covering key generation, address derivation, toolbox functionality
    - Safety checks to prevent confusion with other UTXO chains
+   - Verified deterministic key derivation
+   - Cross-chain address validation tests
 
 ### What's NOT Been Implemented
 
-1. **Incomplete Kaspa Toolbox**: While address validation exists and is tested, still missing:
-   - Address generation from seed phrases
+1. **Transaction Support**: While key generation and address derivation work, still missing:
    - Transaction building (Kaspa's UTXO model differs from Bitcoin due to DAG structure)
    - UTXO selection adapted for parallel blocks
-   - Transaction signing with Kaspa's signature format
-   - Key pair generation
+   - Transaction signing with Schnorr signatures
+   - Fee estimation for DAG transactions
+   - Transaction broadcasting integration
 2. **No Wallet Support**: No Kaspa wallet integrations (Kasware, Kaspa desktop wallet, etc.)
 3. **No Plugin Integration**: No integration with THORChain or Maya Protocol swap plugins
-4. **No API Client**: No Kaspa blockchain API integration for balance queries and UTXO fetching
-5. **Limited Test Coverage**: Only address validation and chain configuration are tested. Need tests for:
+4. **Limited API Integration**: Basic API client exists but missing:
+   - Full UTXO fetching implementation
+   - Balance query optimization
+   - Transaction history
+5. **Limited Test Coverage**: Need tests for:
    - Transaction building when implemented
-   - Key generation when implemented
    - Integration tests with real Kaspa network
    - End-to-end wallet operations
 
@@ -129,12 +145,14 @@ To complete the Kaspa integration, the following tasks are required:
 - [x] Configure `RPC_URLS` and `EXPLORER_URLS` for Kaspa
 
 #### 2. Toolbox Implementation
-- [x] Implement Kaspa address validation (bech32m format with optional "kaspa:" prefix)
-- [ ] Implement Kaspa address generation from seed phrases
+- [x] Implement Kaspa address validation (bech32 format with optional "kaspa:" prefix)
+- [x] Implement Kaspa address generation from seed phrases
+- [x] Implement key pair generation (Schnorr x-only public keys)
+- [x] Implement BIP44 key derivation (m/44'/111111'/0'/0/0)
 - [ ] Implement transaction building for Kaspa's UTXO model
 - [ ] Handle Kaspa's unique DAG structure for UTXO selection
+- [ ] Implement Schnorr transaction signing
 - [ ] Implement balance queries and UTXO management
-- [ ] Implement key pair generation and transaction signing
 
 #### 3. Token Support
 - [x] Create Kaspa token list with native KAS token

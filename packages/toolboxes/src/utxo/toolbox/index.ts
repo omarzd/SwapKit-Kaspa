@@ -1,13 +1,17 @@
 import { Chain, type DerivationPathArray, SwapKitError, type UTXOChain } from "@swapkit/helpers";
 import { createBCHToolbox } from "./bitcoinCash";
+import { createKaspaToolbox } from "./kaspa";
 import type { UtxoToolboxParams } from "./params";
 import { createUTXOToolbox } from "./utxo";
 import { createZcashToolbox } from "./zcash";
 
 type BCHToolbox = Awaited<ReturnType<typeof createBCHToolbox>>;
 type CommonUTXOToolbox = Awaited<
-  ReturnType<typeof createUTXOToolbox<Exclude<UTXOChain, typeof Chain.BitcoinCash | typeof Chain.Zcash>>>
+  ReturnType<
+    typeof createUTXOToolbox<Exclude<UTXOChain, typeof Chain.BitcoinCash | typeof Chain.Kaspa | typeof Chain.Zcash>>
+  >
 >;
+type KaspaToolbox = Awaited<ReturnType<typeof createKaspaToolbox>>;
 type ZcashToolbox = Awaited<ReturnType<typeof createZcashToolbox>>;
 
 export type UTXOToolboxes = {
@@ -16,6 +20,7 @@ export type UTXOToolboxes = {
   [Chain.Dogecoin]: CommonUTXOToolbox;
   [Chain.Litecoin]: CommonUTXOToolbox;
   [Chain.Dash]: CommonUTXOToolbox;
+  [Chain.Kaspa]: KaspaToolbox;
   [Chain.Zcash]: ZcashToolbox;
 };
 
@@ -33,6 +38,11 @@ export async function getUtxoToolbox<T extends keyof UTXOToolboxes>(
       return toolbox as UTXOToolboxes[T];
     }
 
+    case Chain.Kaspa: {
+      const toolbox = await createKaspaToolbox(params as UtxoToolboxParams[typeof Chain.Kaspa]);
+      return toolbox as UTXOToolboxes[T];
+    }
+
     case Chain.Zcash: {
       const toolbox = await createZcashToolbox(params as UtxoToolboxParams[typeof Chain.Zcash]);
       return toolbox as UTXOToolboxes[T];
@@ -44,9 +54,12 @@ export async function getUtxoToolbox<T extends keyof UTXOToolboxes>(
     case Chain.Dash: {
       const toolbox = await createUTXOToolbox({
         chain,
-        ...(params as UtxoToolboxParams[Exclude<T, typeof Chain.BitcoinCash | typeof Chain.Zcash>]),
+        ...(params as UtxoToolboxParams[Exclude<
+          T,
+          typeof Chain.BitcoinCash | typeof Chain.Kaspa | typeof Chain.Zcash
+        >]),
       });
-      return toolbox as UTXOToolboxes[Exclude<T, typeof Chain.BitcoinCash | typeof Chain.Zcash>];
+      return toolbox as UTXOToolboxes[Exclude<T, typeof Chain.BitcoinCash | typeof Chain.Kaspa | typeof Chain.Zcash>];
     }
 
     default:
@@ -56,4 +69,4 @@ export async function getUtxoToolbox<T extends keyof UTXOToolboxes>(
 
 export { stripToCashAddress } from "./bitcoinCash";
 export * from "./params";
-export { bchValidateAddress, stripPrefix, validateZcashAddress } from "./validators";
+export { bchValidateAddress, stripPrefix, validateKaspaAddress, validateZcashAddress } from "./validators";
