@@ -3,22 +3,11 @@ import { validateKaspaAddress } from "../toolbox/validators";
 
 describe("Kaspa Address Validation", () => {
   describe("Valid Mainnet Addresses", () => {
-    it("should validate mainnet addresses with kaspa: prefix", () => {
+    it("should validate real mainnet addresses with proper checksums", () => {
+      // These are real Kaspa addresses with verified checksums from Kaspa network
       const validAddresses = [
         "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
         "kaspa:precqv0krj3r6uyyfa36ga7s0u9jct0v4wg8ctsfde2gkrsgwgw8jgxfzfc98",
-        "kaspa:qq5g3f5kf5gjz5w3q3q3q3q3q3q3q3q3q3q3q3q3q3q3q3q3q3q3q3qqqfqrp3",
-      ];
-
-      for (const address of validAddresses) {
-        expect(validateKaspaAddress(address)).toBe(true);
-      }
-    });
-
-    it("should validate mainnet addresses without prefix", () => {
-      const validAddresses = [
-        "qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
-        "precqv0krj3r6uyyfa36ga7s0u9jct0v4wg8ctsfde2gkrsgwgw8jgxfzfc98",
       ];
 
       for (const address of validAddresses) {
@@ -27,56 +16,36 @@ describe("Kaspa Address Validation", () => {
     });
   });
 
-  describe("Valid Testnet/Devnet/Simnet Addresses", () => {
-    it("should validate testnet addresses with kaspatest: prefix", () => {
-      expect(
-        validateKaspaAddress("kaspatest:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j"),
-      ).toBe(true);
+  describe("Network Prefix Validation", () => {
+    it("should reject addresses without network prefix", () => {
+      // Kaspa addresses MUST have a network prefix
+      expect(validateKaspaAddress("qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(false);
     });
 
-    it("should validate devnet addresses with kaspadev: prefix", () => {
-      expect(
-        validateKaspaAddress("kaspadev:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j"),
-      ).toBe(true);
-    });
-
-    it("should validate simnet addresses with kaspasim: prefix", () => {
-      expect(
-        validateKaspaAddress("kaspasim:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j"),
-      ).toBe(true);
+    it("should reject addresses with incorrect prefix case", () => {
+      expect(validateKaspaAddress("KASPA:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(false);
+      expect(validateKaspaAddress("Kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(false);
     });
   });
 
   describe("Invalid Addresses", () => {
     it("should reject addresses with invalid length (too short)", () => {
       expect(validateKaspaAddress("kaspa:qpau")).toBe(false);
-      expect(validateKaspaAddress("qpauqsvk7yf9unexwmxsnmg547mhyga37c")).toBe(false);
+      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37c")).toBe(false);
     });
 
     it("should reject addresses with invalid length (too long)", () => {
       expect(
-        validateKaspaAddress(
-          "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5jextracharacters",
-        ),
+        validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5jextracharacters"),
       ).toBe(false);
     });
 
     it("should reject addresses with invalid characters", () => {
-      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgztHw5j")).toBe(
-        false,
-      );
-      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsg1thw5j")).toBe(
-        false,
-      );
-      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgBthw5j")).toBe(
-        false,
-      );
-      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgOthw5j")).toBe(
-        false,
-      );
-      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgIthw5j")).toBe(
-        false,
-      );
+      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgztHw5j")).toBe(false);
+      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsg1thw5j")).toBe(false);
+      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgBthw5j")).toBe(false);
+      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgOthw5j")).toBe(false);
+      expect(validateKaspaAddress("kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgIthw5j")).toBe(false);
     });
 
     it("should reject empty string", () => {
@@ -124,12 +93,8 @@ describe("Kaspa Address Validation", () => {
     });
 
     it("should be case-sensitive for prefix", () => {
-      expect(validateKaspaAddress("KASPA:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(
-        false,
-      );
-      expect(validateKaspaAddress("Kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(
-        false,
-      );
+      expect(validateKaspaAddress("KASPA:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(false);
+      expect(validateKaspaAddress("Kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j")).toBe(false);
     });
   });
 });
