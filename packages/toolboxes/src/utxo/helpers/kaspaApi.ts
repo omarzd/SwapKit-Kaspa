@@ -4,6 +4,7 @@
  */
 
 import { RequestClient, SwapKitError } from "@swapkit/helpers";
+import { validateKaspaAddress } from "../toolbox/validators";
 
 /**
  * Kaspa UTXO type
@@ -67,10 +68,132 @@ type KaspaFeeEstimateResponse = {
 const DEFAULT_KASPA_API_URL = "https://api.kaspa.org";
 
 /**
+ * Validate and sanitize custom API URL
+ * Security: Ensures URL is HTTPS and properly formed
+ */
+function validateApiUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Must be HTTPS for security
+    if (parsed.protocol !== "https:") {
+      return false;
+    }
+    // Must have a valid hostname
+    if (!parsed.hostname) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Get Kaspa API base URL from environment or use default
+ * Security: Validates custom URLs to prevent data exfiltration
  */
 function getKaspaApiUrl(customUrl?: string): string {
-  return customUrl || DEFAULT_KASPA_API_URL;
+  if (customUrl) {
+    if (!validateApiUrl(customUrl)) {
+      throw new SwapKitError("toolbox_kaspa_invalid_api_url", {
+        error: "Custom API URL must be a valid HTTPS URL",
+      });
+    }
+    return customUrl;
+  }
+  return DEFAULT_KASPA_API_URL;
+}
+
+/**
+ * Safely parse a string to BigInt
+ * Security: Prevents crashes from malformed input
+ */
+function safeParseBigInt(value: string, fieldName: string): bigint {
+  try {
+    // Validate it's a numeric string
+    if (!/^\d+$/.test(value)) {
+      throw new Error(`Invalid numeric string: ${value}`);
+    }
+    return BigInt(value);
+  } catch (error) {
+    throw new SwapKitError("toolbox_kaspa_invalid_data", {
+      error: `Failed to parse ${fieldName}: ${error instanceof Error ? error.message : "Invalid format"}`,
+    });
+  }
+}
+
+/**
+ * Safely parse a string to number
+ * Security: Validates result is not NaN
+ */
+function safeParseInt(value: string, fieldName: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    throw new SwapKitError("toolbox_kaspa_invalid_data", {
+      error: `Failed to parse ${fieldName}: invalid number format`,
+    });
+  }
+  return parsed;
+}
+
+/**
+ * Validate and sanitize Kaspa address
+ * Security: Prevents URL injection via malicious addresses
+ */
+function sanitizeAddress(address: string): string {
+  // Validate address format
+  if (!validateKaspaAddress(address)) {
+    throw new SwapKitError("toolbox_kaspa_invalid_address", {
+      error: "Invalid Kaspa address format",
+    });
+  }
+
+  // Strip network prefix (kaspa:, kaspatest:, etc.)
+  const strippedAddress = address.includes(":")
+    ? address.split(":")[1]
+    : address;
+
+  // URL-encode to prevent injection
+  return encodeURIComponent(strippedAddress);
+}
+
+/**
+ * Validate transaction ID format
+ * Security: Ensures txId is valid hex to prevent injection
+ */
+function validateTxId(txId: string): string {
+  // Transaction IDs should be hex strings (64 characters for SHA-256)
+  if (!/^[0-9a-fA-F]{64}$/.test(txId)) {
+    throw new SwapKitError("toolbox_kaspa_invalid_txid", {
+      error: "Invalid transaction ID format (must be 64-character hex string)",
+    });
+  }
+  return encodeURIComponent(txId);
+}
+
+/**
+ * Validate signed transaction hex
+ * Security: Ensures transaction data is valid hex
+ */
+function validateSignedTxHex(hex: string): void {
+  if (!hex || hex.length === 0) {
+    throw new SwapKitError("toolbox_kaspa_invalid_tx", {
+      error: "Signed transaction hex cannot be empty",
+    });
+  }
+  // Must be valid hex string
+  if (!/^[0-9a-fA-F]+$/.test(hex)) {
+    throw new SwapKitError("toolbox_kaspa_invalid_tx", {
+      error: "Signed transaction must be a valid hex string",
+    });
+  }
+  // Reasonable length check (prevent DoS with extremely large inputs)
+  if (hex.length > 1_000_000) {
+    // ~500KB max
+    throw new SwapKitError("toolbox_kaspa_invalid_tx", {
+      error: "Signed transaction hex is too large",
+    });
+  }
 }
 
 /**
@@ -90,12 +213,10 @@ export async function getKaspaUtxos({
   try {
     const baseUrl = getKaspaApiUrl(apiUrl);
 
-    // Strip network prefix if present (kaspa:, kaspatest:, etc.)
-    const strippedAddress = address.includes(":")
-      ? address.split(":")[1]
-      : address;
+    // Validate and sanitize address (prevents URL injection)
+    const sanitizedAddress = sanitizeAddress(address);
 
-    const url = `${baseUrl}/addresses/${strippedAddress}/utxos`;
+    const url = `${baseUrl}/addresses/${sanitizedAddress}/utxos`;
 
     const response = await RequestClient.get<KaspaUtxoResponse>(url);
 
@@ -105,13 +226,13 @@ export async function getKaspaUtxos({
       });
     }
 
-    // Convert API response to our UTXO type
+    // Convert API response to our UTXO type (with safe parsing)
     const utxos: KaspaUTXO[] = response.utxos.map((utxo) => ({
       transactionId: utxo.outpoint.transactionId,
       index: utxo.outpoint.index,
-      amount: BigInt(utxo.utxoEntry.amount),
+      amount: safeParseBigInt(utxo.utxoEntry.amount, "UTXO amount"),
       scriptPublicKey: utxo.utxoEntry.scriptPublicKey.scriptPublicKey,
-      blockDaaScore: Number.parseInt(utxo.utxoEntry.blockDaaScore, 10),
+      blockDaaScore: safeParseInt(utxo.utxoEntry.blockDaaScore, "block DAA score"),
       isCoinbase: utxo.utxoEntry.isCoinbase,
     }));
 
@@ -147,12 +268,10 @@ export async function getKaspaBalance({
   try {
     const baseUrl = getKaspaApiUrl(apiUrl);
 
-    // Strip network prefix if present
-    const strippedAddress = address.includes(":")
-      ? address.split(":")[1]
-      : address;
+    // Validate and sanitize address (prevents URL injection)
+    const sanitizedAddress = sanitizeAddress(address);
 
-    const url = `${baseUrl}/addresses/${strippedAddress}/balance`;
+    const url = `${baseUrl}/addresses/${sanitizedAddress}/balance`;
 
     const response = await RequestClient.get<KaspaBalanceResponse>(url);
 
@@ -162,7 +281,7 @@ export async function getKaspaBalance({
       });
     }
 
-    return BigInt(response.balance);
+    return safeParseBigInt(response.balance, "balance");
   } catch (error) {
     if (error instanceof SwapKitError) throw error;
 
@@ -247,6 +366,9 @@ export async function broadcastKaspaTransaction({
   apiUrl?: string;
 }): Promise<string> {
   try {
+    // Validate transaction hex (prevents malicious input)
+    validateSignedTxHex(signedTxHex);
+
     const baseUrl = getKaspaApiUrl(apiUrl);
     const url = `${baseUrl}/transactions`;
 
@@ -292,8 +414,11 @@ export async function getKaspaTransaction({
   apiUrl?: string;
 }): Promise<unknown> {
   try {
+    // Validate and sanitize transaction ID (prevents URL injection)
+    const sanitizedTxId = validateTxId(txId);
+
     const baseUrl = getKaspaApiUrl(apiUrl);
-    const url = `${baseUrl}/transactions/${txId}`;
+    const url = `${baseUrl}/transactions/${sanitizedTxId}`;
 
     const response = await RequestClient.get(url);
 
